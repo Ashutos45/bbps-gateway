@@ -1,0 +1,435 @@
+{
+	"info": {
+		"_postman_id": "c62a8dc9-7c85-48b4-9372-e1e3b6e828d1",
+		"name": "Enterprise BBPS Gateway API",
+		"description": "Production-grade enterprise Bharat Bill Payment System (BBPS) Gateway collection.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "01. Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.access_token) {",
+									"    pm.collectionVariables.set(\"access_token\", jsonData.access_token);",
+									"    console.log(\"Saved access token successfully.\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"client\",\n    \"password\": \"client123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02. Fetch Bill",
+			"item": [
+				{
+					"name": "Validate & Fetch Bill",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.validationid) {",
+									"    pm.collectionVariables.set(\"validationid\", jsonData.validationid);",
+									"    pm.collectionVariables.set(\"payment_amount\", jsonData.payment_amount);",
+									"    console.log(\"Saved validationid: \" + jsonData.validationid);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"billerid\": \"MOCKELE00125MAH\",\n    \"billeraccountid\": \"ELEC987654321\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/BOBCOU/BBPS/{{sourceid}}/customers/{{customerid}}/billpay/validate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"BOBCOU",
+								"BBPS",
+								"{{sourceid}}",
+								"customers",
+								"{{customerid}}",
+								"billpay",
+								"validate"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03. Pay Bill",
+			"item": [
+				{
+					"name": "Submit Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.source_ref_no) {",
+									"    pm.collectionVariables.set(\"trace_id\", jsonData.source_ref_no);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "x-simulate-failure",
+								"value": "false",
+								"description": "Set to true to simulate ambiguous timeouts"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"validationid\": \"{{validationid}}\",\n    \"payment_method\": \"CARD\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/BOBCOU/BBPS/{{sourceid}}/customers/{{customerid}}/billpay/payments",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"BOBCOU",
+								"BBPS",
+								"{{sourceid}}",
+								"customers",
+								"{{customerid}}",
+								"billpay",
+								"payments"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "04. Favorite Billers",
+			"item": [
+				{
+					"name": "Register Favorite Biller",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"billerid\": \"MOCKELE00125MAH\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/BOBCOU/BBPS/{{sourceid}}/customers/{{customerid}}/billpay/billeraccounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"BOBCOU",
+								"BBPS",
+								"{{sourceid}}",
+								"customers",
+								"{{customerid}}",
+								"billpay",
+								"billeraccounts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Favorite Billers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/BOBCOU/BBPS/{{sourceid}}/customers/{{customerid}}/billpay/billeraccounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"BOBCOU",
+								"BBPS",
+								"{{sourceid}}",
+								"customers",
+								"{{customerid}}",
+								"billpay",
+								"billeraccounts"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05. Prepaid Plans",
+			"item": [
+				{
+					"name": "Query Plans (GET)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/BOBCOU/BBPS/{{sourceid}}/billpay/plans?operator=Tamil Nadu Telecom&circle=Tamil Nadu",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"BOBCOU",
+								"BBPS",
+								"{{sourceid}}",
+								"billpay",
+								"plans"
+							],
+							"query": [
+								{
+									"key": "operator",
+									"value": "Tamil Nadu Telecom"
+								},
+								{
+									"key": "circle",
+									"value": "Tamil Nadu"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Query Plans (POST)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"operator\": \"Tamil Nadu Telecom\",\n    \"circle\": \"Tamil Nadu\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/BOBCOU/BBPS/{{sourceid}}/billpay/plans",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"BOBCOU",
+								"BBPS",
+								"{{sourceid}}",
+								"billpay",
+								"plans"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "06. Reconciliation",
+			"item": [
+				{
+					"name": "Manual Reconcile Transaction",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"trace_id\": \"{{trace_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/BOBCOU/BBPS/{{sourceid}}/billpay/reconcile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"BOBCOU",
+								"BBPS",
+								"{{sourceid}}",
+								"billpay",
+								"reconcile"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "07. Security Demo",
+			"item": [
+				{
+					"name": "Get Health (Public Bypass)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Blocked Path (Gateway Prefix Violation)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/invalid/route/path",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"invalid",
+								"route",
+								"path"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "sourceid",
+			"value": "mbanking",
+			"type": "string"
+		},
+		{
+			"key": "customerid",
+			"value": "client",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "validationid",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "payment_amount",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "trace_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

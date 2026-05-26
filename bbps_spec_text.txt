@@ -1,0 +1,3115 @@
+--- PAGE 1 ---
+w w w .ise rve u .in
+B h u b a n e sw a r
+B a n g a lo re
+M u m b a i
+ 
+    
+ 
+  
+ 
+       
+          
+        
+       
+ 
+      
+ 
+       
+       
+       
+    
+       
+       
+  
+        
+   
+   
+  
+      
+ 
+                  
+   
+ 
+  
+   
+ 
+  
+      
+   
+ 
+  
+   
+ 
+  
+   
+ 
+  
+  BBPS COU API 
+Specification Document
+for
+Bank of Baroda
+Version - 4.0.0
+
+--- PAGE 2 ---
+Document Revision History 
+ 
+Product Manager 
+Document Revision History 
+1.0.0 18 APR 2025
+Product Manager 2.0.0 19 MAY 2025
+Approving AuthorityVersion DescriptionDateVersion
+2.1.0 20 MAY 2025 Product Manager  
+3.0.0 27 MAY 2025 Product Manager
+3.1.0 09 JUL 2025 Product Manager
+3.2.0 19 AUG 2025 Product Manager
+4.0.0 24 FEB 2026 Product Manager
+Document  Standardization -
+1. Favorite Biller API details added.
+2. Fetch and Pay API updated.
+Initial Draft
+Document  Modification  -
+1. All Fetch APIs updated.
+Document  Modification 
+1. Base URL updated.
+Document  Standardization 
+1. Oneview API details added.
+Document Standardization.
+1. Fetch Prepaid Plans API added.
+2. Feature-phone channel details added.
+Document  Standardization.
+1. Endpoints are updated.
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 3 ---
+Disclaimer
+This document is the intellectual property of iServeU Technology Private Limited and should solely be used as a tool of knowledge exchange. We 
+discourage any reproduction of the document under any circumstances.
+All the values corresponding to all the fields in the document are dummy data. Any resemblance with any real life data is purely coincidental. 
+The data provided in the Request and Response Payloads are sample data. We encourage usage of own sample data for desired results.
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 4 ---
+BoB BBPS COU Document v4.0.0
+ii
+Table of Contents
+1 Introduction ......................................................................................................................................... 5
+1.1 Base URL(UAT) ................................................................................................................................ 5
+2 Headers and Authentication .............................................................................................................. 6
+2.1 Request Header Attributes.............................................................................................................. 6
+2.2 HMAC Request Signature................................................................................................................ 6
+2.3 Response Header Attributes ........................................................................................................... 7
+2.4 HMAC Response Signature............................................................................................................. 8
+3 Generate Biller List File API .............................................................................................................. 10
+3.1 Headers .......................................................................................................................................... 10
+3.2 Request Body Parameters............................................................................................................. 10
+3.3 Sample Request Body.................................................................................................................... 11
+3.4 Response Body Parameters.......................................................................................................... 11
+3.5 Sample Response Body................................................................................................................. 11
+4 Get Biller Master File......................................................................................................................... 12
+4.1 Headers .......................................................................................................................................... 12
+4.2 Response Body Parameters.......................................................................................................... 12
+4.3 Sample Response Body................................................................................................................. 13
+5 Fetch Bill ............................................................................................................................................ 14
+5.1 Headers .......................................................................................................................................... 14
+5.2 Request Body Parameters............................................................................................................. 14
+5.3 Sample Request Body.................................................................................................................... 16
+5.4 Response Body Parameters.......................................................................................................... 17
+5.5 Sample Response Body................................................................................................................. 19
+6 PayBill ................................................................................................................................................ 22
+6.1 Headers .......................................................................................................................................... 22
+6.2 Request Body Parameters............................................................................................................. 23
+6.3 Sample Request Body.................................................................................................................... 26
+6.4 Response Body Parameters.......................................................................................................... 28
+6.5 Sample Response Body................................................................................................................. 30
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 5 ---
+BoB BBPS COU Document v4.0.0
+iii
+7 ADD Favorite Biller API ..................................................................................................................... 33
+7.1 Headers .......................................................................................................................................... 33
+7.2 Request Body Parameters............................................................................................................. 33
+7.3 Sample Request Body.................................................................................................................... 35
+7.4 Response Body Parameters.......................................................................................................... 37
+7.5 Sample Response Body................................................................................................................. 39
+7.5.1 Success ....................................................................................................................................... 39
+7.5.2 Failed ........................................................................................................................................... 40
+8 Update Favorite Biller API................................................................................................................. 41
+8.1 Headers .......................................................................................................................................... 41
+8.2 Request Body Parameters............................................................................................................. 41
+8.3 Sample Request Body.................................................................................................................... 43
+8.4 Response Body Parameters.......................................................................................................... 44
+8.5 Sample Response Body................................................................................................................. 46
+8.5.1 Success ....................................................................................................................................... 46
+8.5.2 Failed ........................................................................................................................................... 47
+9 Get Favorite Billers API..................................................................................................................... 48
+9.1 Headers .......................................................................................................................................... 48
+9.2 Response Body Parameters.......................................................................................................... 48
+9.3 Sample Response Body................................................................................................................. 50
+9.3.1 Success ....................................................................................................................................... 50
+9.3.2 Failed ........................................................................................................................................... 56
+10 Delete Favorite Biller API .................................................................................................................. 57
+10.1 Headers .......................................................................................................................................... 57
+10.2 Response Body Parameters.......................................................................................................... 57
+10.3 Sample Response Body................................................................................................................. 58
+10.3.1 Success ....................................................................................................................................... 58
+11 Fetch by Billers ID API....................................................................................................................... 60
+11.1 Headers .......................................................................................................................................... 60
+11.2 Response Body Parameters.......................................................................................................... 60
+11.3 Sample Response Body................................................................................................................. 63
+12 Oneview API ...................................................................................................................................... 70
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 6 ---
+BoB BBPS COU Document v4.0.0
+iv
+12.1 Headers .......................................................................................................................................... 70
+12.2 Response Body Parameters.......................................................................................................... 70
+12.3 Sample Response Body................................................................................................................. 73
+12.3.1 Success ....................................................................................................................................... 73
+12.3.2 Failed ........................................................................................................................................... 75
+13 Fetch Prepaid Plans API................................................................................................................... 76
+13.1 Headers .......................................................................................................................................... 76
+13.2 Request Details .............................................................................................................................. 77
+13.3 Response Body Parameters.......................................................................................................... 77
+13.4 Sample Response Body................................................................................................................. 79
+13.4.1 Success ....................................................................................................................................... 79
+13.4.2 Failed ........................................................................................................................................... 80
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 7 ---
+BoB BBPS COU Document v4.0.0
+5
+1 Introduction
+This API document provides the integration framework for Bank of Baroda as a BBPOU on the Bharat 
+Bill Payment System (BBPS) through the Customer Onboarding Unit (COU). It includes API 
+specifications, request/response formats, authentication methods, and compliance requirements to 
+facilitate a secure and efficient PayBill, Fetch Bill, and Generate Biller List File API process.
+1.1 Base URL(UAT)
+Use these Base URLs for the following APIs.
+mbanking: https://api-preprod.isampurna.com/mbanking
+upi: https://api-preprod.isampurna.com/upi
+fi: https://api-preprod.isampurna.com/fi
+feature-phone:  https://api-preprod.isampurna.com/feature-phone
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+NOTE:
+Please change the Authorization, pass HMACSignature dynamically for all requests
+Please use the below clientId & secretKey to generate HMACSignature
+mbanking  :
+client_id : bH1aI2Qgp7zJJFsmF01pPJtzawUBrafGkIz9rWrYA06wNtNj
+client_secret: ugVz1hETNXUIwnWtpLafAASFPL0qGI5fAWybWMfuEsIL3HusiIRWO1AvVmBRe0Gy
+fi:
+client_id :UG94ygc40cgWNF36y5BOWsKNaux9Kt1lyAikFdXV6LXC6mtp
+client_secret: rfAjcxaY4ZNjxpP2A63os4tXllgOQ9mMoesrSs099wnEzWDAxGfBcC4qGJCIfqxA
+upi:
+client_id : qpcklLfKX6JA7taczJfoJXvSglPy4jR5lmWx3YdQsIaV1PVK
+client_secret: g8qZYnBjjd3FV0r8ZRpSCi96WO8DGEXFL3uScivt99XlRyGSSKxkBep5z9a11nfm
+feature-phone:
+ClientID:  OXYxrVdP8UNnwPGnEFRDwwSDCwYYThO51ItcknPT6aCKr8TT
+ClientSecret:  GSOjY6fAaCYX8UVkdHGQTz1dHF6tdRADpPTuo94lJvRENgalwdVpjquAdw6aTedk
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 8 ---
+BoB BBPS COU Document v4.0.0
+6
+2 Headers and Authentication
+ The details of Headers and Authentication process is given below:
+2.1 Request Header Attributes
+With each request, you will need to set request headers as below:
+ Content-Type
+Request Content-Type to take the values application/json
+ Accept
+Accept Response Content-Type to take the values application/json
+ BD-Traceid
+Traceid is used for idempotency and the request with the same Traceid within the day will be rejected. 
+Traceid can be alphanumeric without any spaces or special characters and should be a maximum size of 
+30.
+ BD-Timestamp
+Transaction timestamp in the yyyymmddhh24miss format
+ Authorization
+This will be generated by the client as explained in the steps below and validated by BillDesk prior to 
+processing the request. Format of the header is HMACSignature clientid:hmacvalue
+2.2 HMAC Request Signature
+The process to generate the Authorization Request Signature is as below:
+Step 1:
+Receive a clientid and a secretkey from BillDesk. The clientid identifies the client sending the requests, and 
+the secretkey is used to generate the hash for the request.clientid = client1 and secretkey = 
+3FF9CBF87A66A452
+Step 2:
+Create the data string that is input to generate the HMAC-SHA256 hash.
+hmac_string = HTTP-Method + "|" + URI + "|" + Content-Type +"|"+ Accept + "|"+ BD-Traceid + "|" + BD-
+Timestamp + "|" + SHA256(Requestbody)
+HTTP-Method = POST (Upper case)
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 9 ---
+BoB BBPS COU Document v4.0.0
+7
+URI = /hgpay/v2_1/abcd/customers/12345/billpay/billers
+Content-Type = application/json
+Accept = application/json
+BD-Traceid = a453c1353
+BD-Timestamp = 20160528121320
+SHA256(Requestbody) = 
+170AE002EFA016D1AB3CC2CF82B4E2B57BE2E7FCE92D4DB1355D25718A039EBC
+hmac_string = POST|/hgpay/v2_1/abcd/customers/12345/billpay/billers|application/json|application/json|
+a453c1353|20160528121320|
+170AE002EFA016D1AB3CC2CF82B4E2B57BE2E7FCE92D4DB1355D25718A039EBC
+Step 3:
+Generate the HMACValue
+HMACValue = HMAC-SHA256(hmac_string, secretkey)
+HMACValue =
+HMAC-SHA256 (POST|/hgpay/v2_1/abcd/customers/12345/billpay/billers|application/json|application/
+json|a453c1353|20160528121320|
+170AE002EFA016D1AB3CC2CF82B4E2B57BE2E7FCE92D4DB1355D25718A039EBC, 3FF9CBF87A66A452)
+HMACValue = 8C5963E4CA185C7F41F00C7EBA54D344A5717F56422EC6BF2C464DC7DBA02961
+Step 4
+Create the final Authentication HeaderAuthorization HMACSignature
+client1:8C5963E4CA185C7F41F00C7EBA54D344A5717F56422EC6BF2C464DC7DBA02961
+2.3 Response Header Attributes
+With each response, you will receive the following response headers:
+ Content-Type
+Request Content-Type to take the values application/json
+ BD-Traceid
+Same Traceid as passed in request
+ BD-Timestamp
+Same timestamp value as passed in request
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 10 ---
+BoB BBPS COU Document v4.0.0
+8
+ Server-Authorization
+This HMAC signature is generated by BillDesk and the client has to authenticate the signature. Only valid 
+responses should be processed. Format of the header is HMACSignature clientid:HMACValue
+hmac_string = HTTP-Status + "|" + Content-Type + "|" + BD-Traceid + "|" + BD-Timestamp + "|" + 
+SHA256(Responsebody)
+HTTP-Status = 200
+Content-Type = application/json
+BD-Traceid = a453c1353
+BD-Timestamp = 20160528121320
+SHA256(Responsebody) =
+C6ED656BCA63C0BE27128D54DEC93F9A615D6E06CD1BEDA5574FD33FCD25E90A
+hmac_string = 200|application/json|a453c1353|20160528121320|
+C6ED656BCA63C0BE27128D54DEC93F9A615D6E06CD1BEDA5574FD33FCD25E90A
+HMACValue = HMAC-SHA256(hmac_string, secretkey)
+HMACValue = HMAC-SHA256 (200|application/json|a453c1353|20160528121320|
+C6ED656BCA63C0BE27128D54DEC93F9A615D6E06CD1BEDA5574FD33FCD25E90A, 
+3FF9CBF87A66A452)
+HMACValue = A79844C1BC90E1E6A615FDFDCE56A3BD8BB344BCE1A75F0C6D1F9A69D3252B13
+   Use the same  clientid  and a secretkey that was used to generate the request.clientid = client1 and 
+secretkey = 3FF9CBF87A66A452
+2.4  HMAC Response Signature
+The process to validate the Server-Authorization Response Signature is as below:
+Step 1:
+Step 2:
+Create the data string that is input to generate the HMAC-SHA256 hash
+Step 3:
+Generate the HMACValue
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 11 ---
+BoB BBPS COU Document v4.0.0
+9
+client1:A79844C1BC90E1E6A615FDFDCE56A3BD8BB344BCE1A75F0C6D1F9A69D3252B13
+Step 4:
+Validate generated hmacvalue with value received in Server-Authorization HeaderServer-Authorization 
+HMACSignature
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 12 ---
+BoB BBPS COU Document v4.0.0
+10
+3 Generate Biller List File API
+Description:
+This API initiates the generation of a Biller Master File. Upon receiving the request, BillDesk returns an 
+acknowledgement. The system will later post the generated file to the provided callback_url.
+Method: POST
+Endpoint:/BOBCOU/BBPS/<sourceid>/billpay/billers/file
+3.1 Headers
+Content-Type: application/json
+Accept: application/json
+BD-Traceid: a453c1353
+BD-Timestamp: 20160528121320
+Authorization: HMACSignature 
+K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ:4b3db0014df9b944ce289895b6f6
+0e1f71cfdff0fc21119f126bd877423829bb
+3.2 Request Body Parameters
+Parameters                 
+             
+Parameter description  Data type Mandatory/ Optional
+callback_url Callback URL
+The URL to which the callback 
+response will be sent.
+String Mandatory
+NOTE:
+The sourceid parameter must be provided by the API consumer, and its value may be one of the following 
+based on the user’s channel: mbanking, upi  fi, or feature-phone.
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 13 ---
+BoB BBPS COU Document v4.0.0
+11
+3.3 Sample Request Body
+callback_url(string): The URL to which the callback response will be sent.
+{
+    "callback_url": "https://www.bobtest.com/bbps/billers"
+}
+3.4 Response Body Parameters
+Parameters  Parameter description   Data type
+objectid Object ID. String
+fileid File ID  String
+file_status File Status  String
+callback_url Particular Callback URL  String
+3.5 Sample Response Body
+{
+  "objectid": "file",
+  "fileid": "HGA178987978789",
+  "file_status": "INPROCESS",
+  "callback_url": "https://www.bobtest.com/bbps/billers"
+}
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 14 ---
+BoB BBPS COU Document v4.0.0
+12
+4 Get Biller Master File
+Description:
+This API supports the download of the biller master file previously generated.
+Endpoint: /BOBCOU/BBPS/<sourceid>/billpay/billers/file/<fileid>
+Method: GET
+4.1 Headers
+Content-Type: application/json
+Accept: application/json
+BD-Traceid: a453c1353
+BD-Timestamp: 20160528121320
+Authorization: HMACSignature 
+K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ:5ff0351eae3c3ef5016d87d83d7a0
+c57c0ae2c61dddc7943350b0fc809f399ca
+4.2 Response Body Parameters
+Parameters  Parameter description   Data type
+status Status of the Operation. String
+message Message describing the operation status. String
+NOTE:
+The sourceid parameter must be provided by the API consumer, and its value may be one of the following 
+based on the user’s channel: mbanking, upi  fi, or feature-phone.
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 15 ---
+BoB BBPS COU Document v4.0.0
+13
+filePath File Path String
+fileName File Name String
+fileContent File Content String
+4.3 Sample Response Body
+{
+    "status": 0,
+    "message": "Successfully fetched the zipped file",
+    "filePath": "biller_list/96257f3a2fe9.zip",
+    "fileName": "96257f3a2fe9.zip",
+    "fileContent": 
+"UEsDBBQACAAIAEstkVoAAAAAAAAAAAAAAAAQAAAAOTYyNTdmM2EyZmU5LnR4dOzda3vaSJsv"
+}
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 16 ---
+BoB BBPS COU Document v4.0.0
+14
+5 Fetch Bill
+Description:
+Prior to initiating a debit to the customer account, the validate payment request can be used to verify the 
+biller authenticator details or fetch the latest available bill for the biller account. The validate payment 
+request will return a validationid that is required to initiate payment.
+Endpoint: /BOBCOU/BBPS/<sourceid>/customers/<customerid>/billpay/validate
+Method: POST
+Content-Type: application/json
+Accept: application/json
+BD-Traceid: a453c1353
+BD-Timestamp: 20160528121320
+Authorization: HMACSignature 
+K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ:4ccef3585a55830610935ad3eaaf
+a516bd09f6a4ff58c6886ff2d6f107e5a166
+5.2 Request Body Parameters
+Parameters                 
+             
+Parameter description  Data type Mandatory/ Optional/
+Conditional
+sourceid Fixed source ID provided by BillDesk to 
+the client
+String Mandatory
+NOTE:
+The sourceid parameter must be provided by the API consumer, and its value may be one of the following 
+based on the user’s channel: mbanking, upi  fi, or feature-phone.
+5.1  Headers
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 17 ---
+BoB BBPS COU Document v4.0.0
+15
+customerid Unique ID for the customer as provided 
+by the source
+String Mandatory
+billeraccountid Represents the biller account ID 
+associated with the registered biller
+String
+ 
+Conditional (Mandatory 
+- if validation is done 
+using billeraccountid)
+billerid Unique biller ID assigned to each biller 
+by BillDesk
+String Conditional (Mandatory 
+- if using a combination 
+of billerid and 
+authenticators)
+authenticators
+Child Attributes
+ parameter_name
+ 
+ value
+ List of specific parameters 
+identifying the biller account
+ Fixed name identifying the 
+parameter (e.g. "Consumer 
+Number")
+ Value corresponding to the 
+`parameter_name` (e.g. 
+"20382028438")
+Array
+ 
+String
+ 
+String
+Conditional (Mandatory 
+- If using a combination 
+of billerid and 
+authenticators.)
+currency Three-digit numeric ISO currency code String Conditional (Mandatory 
+- If `payment_amount` 
+is being sent)
+payment_amount Amount in decimal (up to two decimal 
+places)
+String
+ 
+Conditional (Mandatory 
+- If 
+`paymentamount_valida
+tion` flag is "Y" for the 
+billerid in the request)
+additional_validation_d
+etails
+Child Attributes:
+ parameter_name
+ value
+Additional parameters required for 
+validation/payment
+ parameter_name: Name of the 
+parameter (e.g. "Recharge Type")
+ value: Corresponding value (e.g. 
+"1")
+String Optional
+customer
+Child Attributes:
+ firstname
+ lastname
+ mobile
+ 
+Parameters identifying the customer.
+ firstname- First name of the 
+customer.
+ lastname: Last name of the 
+customer
+ mobile: Primary mobile number of 
+the customer. (It can be used to 
+search for a transaction.)
+String Mandatory
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 18 ---
+BoB BBPS COU Document v4.0.0
+16
+metadata Parameters identifying the source 
+agent and device from which the 
+request originated.
+ (Details of child attributes can be 
+added as needed.)
+string Mandatory
+NOTE:
+Either `billeraccountid` OR the combination of `billerid` and `authenticators` is mandatory.
+5.3 Sample Request Body
+{
+    "billeraccountid": "RELEN155187",
+    "billerid": "BBPS00000NAT01",
+    "authenticators": [
+        {
+            "seq": "1",
+            "parameter_name": "Customer Reference Field1",
+            "value": "10"
+        }
+    ],
+    "payment_amount": "920.00",
+    "currency": "356",
+    "sitxn": "yes",
+    "pay_multiple_bills": "N",
+    "customer": {
+        "firstname": "Bikash",
+        "lastname": "Sao",
+        "mobile": "9012345006",
+        "email": "dinesh.rout@iserveu.in"
+    },
+    "metadata": {
+        "agent": {
+            "agentid": "BD001MPY100000100001",
+            "sub_agentid": "BD001MPY11"
+        },
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 19 ---
+BoB BBPS COU Document v4.0.0
+17
+        "device": {
+            "init_channel": "Internet",
+            "ip": "124.124.1.1",
+            "mac": "11-AC-58-21-1B-AA"
+        }
+    },
+    "risk": [
+        {
+            "score_provider": "OU01",
+            "score_value": "030",
+            "score_type": "TXNRISK"
+        },
+        {
+            "score_provider": "BBPS",
+            "score_value": "030",
+            "score_type": "TXNRISK"
+        }
+    ]
+}
+5.4 Response Body Parameters
+Parameters  Parameter description   Data type
+objectid Object ID String
+sourceid Source ID String
+customerid Customer ID String
+customer_name Customer Name String
+validationid Validation ID String
+validation_date Validation date String
+valid_until Last date till it is valid String
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 20 ---
+BoB BBPS COU Document v4.0.0
+18
+billerid Biller id String
+biller_name Biller name String
+biller_category Biller category String
+authenticators
+ 
+ seq
+ parameter_name
+ value
+String
+currency Currency (type of money) String
+billlist  objected
+ validation_id
+ user_id
+ user_name
+ ref_id
+ agent_id
+ agent_tags[name,value]
+String
+biller_id Biller Id String
+customer_params Customer Parameters
+ name
+ value
+String
+amount Amount String
+bill_date Bill date String
+bill_number Bill number String
+bill_period Bill period String
+due_date Due date String
+bill_amount Bill Amount String
+ccf CCF String
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 21 ---
+BoB BBPS COU Document v4.0.0
+19
+ccf_desc CCF Description String
+biller_response_tags Biller response tags
+ name
+ value
+String
+additional_info Additional information
+ name
+ value
+String
+planlist Plan list String
+pay_multiple_bills Pay multiple bills String
+additional_validation_det
+ails
+ parameter_name
+ value
+String
+additional_info Additional information String
+5.5 Sample Response Body
+{
+    "objectid": "validation",
+    "sourceid": "mbanking",
+    "customerid": "1234567890",
+    "validationid": "2906285783064576",
+    "status": 200,
+    "error_code": "",
+    "message": "Successful",
+    "payment_amount": "920.00",
+    "validation_date": "19-05-2025 11:15:40",
+    "valid_until": "20-05-2025 00:00:00",
+    "billerid": "UPPCL0000UTP02",
+    "biller_name": "Uttar Pradesh Power Corp Ltd (UPPCL) - RURAL",
+    "biller_category": "Electricity",
+    "authenticators": [
+        {
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 22 ---
+BoB BBPS COU Document v4.0.0
+20
+            "seq": "1",
+            "parameter_name": "Consumer No",
+            "value": "111111111"
+        },
+        {
+            "seq": "2",
+            "parameter_name": "Billing cycle",
+            "value": "02"
+        }
+    ],
+    "currency": "356",
+    "billlist": [
+        {
+            "objectid": "bill",
+            "billid": "123450001",
+            "billerid": "UPPCL0000UTP02",
+            "billperiod": "June",
+            "customer_name": "Ashish",
+            "billeraccountid": "RELEN155187",
+            "authenticators": [
+                {
+                    "name": "Consumer No",
+                    "value": "111111111"
+                },
+                {
+                    "name": "Billing cycle",
+                    "value": "02"
+                }
+            ],
+            "billnumber": "123450001",
+            "billdate": "19-05-2025",
+            "billduedate": "19-05-2025",
+            "billamount": "20000",
+            "early_billduedate": "Invalid date",
+            "early_billdiscount": null,
+            "early_billamount": null,
+            "late_payment_charges": null,
+            "late_payment_amount": null,
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 23 ---
+BoB BBPS COU Document v4.0.0
+21
+            "net_billamount": "20000",
+            "currency": "356",
+            "description": "Bill payment for Uttar Pradesh Power Corp Ltd (UPPCL) - RURAL",
+            "additional_details": [],
+            "line_items": [],
+            "billstatus": "UNPAID"
+        }
+    ],
+    "planlist": [],
+    "pay_multiple_bills": "N",
+    "additional_validation_details": [
+        {
+            "parameter_name": "Recharge Type",
+            "value": "1"
+        }
+    ],
+    "additional_info": []
+}
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 24 ---
+BoB BBPS COU Document v4.0.0
+22
+6 PayBill
+Description:
+You can initiate a payment request in any of the following three ways. Payment based on a validated 
+request, using a validationid and, billid when available. Payment against a presented bill, using a bill ID. An 
+adhoc payment, using the billeraccountid or the authenticators and billerid (without a validationid or billid). 
+The response will contain the payment object for valid payment requests.
+ The payment workflow will need to be preconfigured for a source. The following workflow can be 
+supported based on the value of the parameter authorization_type in the request:
+ In case the payment is already authorized (debit completed by source), the parameter 
+authorization_type is not required in the request. The request will create a successful payment 
+resource in the BillPay system. The payment_status in the response is returned as “PAID”.
+Schedule: This value can be passed for the request parameter to schedule an auto payment for a future 
+date. The payment will be processed as per the regular workflow of auto-payment
+Authorize: This value can be passed for the request parameter to create a payment resource where debit is 
+initiated by BillDesk. The response can have payment_status as “PAID”, “FAILED”, or “DELIVERED” based on 
+the status of the debit process.
+Onhold: The source can define a payment workflow to be completed in a two-step process, in which case 
+this value can be passed to create a temporary payment resource. The payment_status in the response is to 
+be returned as “PENDING”. The source can then perform any other authentication, process the debit, and 
+call the “Approve Payment” API to complete the payment process.
+Endpoint: /BOBCOU/BBPS/<sourceid>/customers/<customerid>/billpay/payments
+Method: POST
+NOTE:
+The sourceid parameter must be provided by the API consumer, and its value may be one of the following 
+based on the user’s channel: mbanking, upi  fi, or feature-phone.
+6.1  Headers
+Content-Type:  application/json
+Accept:  application/json
+BD-Traceid:  a453c1353
+BD-Timestamp:  20160528121320
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 25 ---
+BoB BBPS COU Document v4.0.0
+23
+Authorization: HMACSignature 
+K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ:580e61ff874032f20cf6638b1b186
+366aa2838f48f8258122a040d066201bf72
+6.2 Request Body Parameters
+Parameters                 
+             
+Parameter description  Data type Mandatory/ Optional/
+Conditional
+sourceid Fixed source ID provided by BillDesk to 
+the client
+String Mandatory
+customerid Unique ID for the customer as 
+provided by the source
+String Mandatory
+billerid Unique biller ID assigned to each biller 
+by BillDesk
+String Conditional
+validationid Unique ID from the response to the 
+Validate Payment request.  
+String Conditional (Mandatory - 
+If payment is based on a 
+validated request)
+billid Unique ID from the Retrieve Bills 
+response
+String Conditional (Mandatory - 
+If payment is against a 
+presented bill)
+billeraccountid Unique ID assigned by BillDesk for 
+registered biller accounts.  
+String Conditional (Mandatory - 
+For adhoc payment 
+using `billeraccountid` or 
+`authenticators` & 
+`billerid`, without 
+`validationid` or `billid`)
+authenticators
+ 
+Child Attributes
+ seq
+ parameter_name
+ value
+List of parameters that uniquely 
+identify the biller account
+ `seq`: Order of appearance in 
+frontend.
+ `parameter_name`: Name 
+identifying the parameter (e.g., 
+Consumer Number).
+ `value`: Corresponding value (e.g., 
+20382028438)
+ 
+String Mandatory
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 26 ---
+BoB BBPS COU Document v4.0.0
+24
+source_ref_no Unique reference number generated by 
+the source per payment request when 
+the debit is processed.
+String Mandatory
+payment_type
+Values:
+ instapay
+ billpay
+ adhoc
+Type of payment
+ 
+ `instapay`: With prior validated 
+request (`validationid` present).
+ `billpay`: Against a presented bill 
+(`billid` present).
+ `adhoc`: Without `validationid` or 
+`billid`.
+String Mandatory
+payment_account Customer's payment details. May 
+contain `paymentaccountid` or 
+necessary details for processing
+Object Mandatory
+currency 3-digit numeric ISO code representing 
+currency
+String Mandatory
+payment_amount Payment amount (in decimal, up to 2 
+places).
+String Mandatory
+cou_conv_fee A convenience fee is collected by COU 
+from the customer.  
+ If no fee, send `0.00`
+ 
+String Mandatory
+bou_conv_fee BOU-mandated convenience fee 
+collected from customer.  
+ If no fee, send `0.00`.
+String Mandatory
+debit_amount Total debit amount = 
+`payment_amount + cou_conv_fee + 
+bou_conv_fee`.
+String Mandatory
+payment_remarks Customer remarks for the payment. String Optional
+schedule_date Scheduled payment date. String Conditional (Mandatory - 
+If `authorization_type` is 
+set to `schedule`)
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 27 ---
+BoB BBPS COU Document v4.0.0
+25
+additional_validation_d
+etails
+Child Attributes:
+ parameter_name
+ value
+Extra parameters needed by the biller.
+ `parameter_name`: Name
+(e.g., Recharge Type).
+ `value`: Value (e.g., 1).
+ 
+String Optional
+customer
+Child Attributes:
+ firstname
+ lastname
+ mobile
+ mobile_alt
+ email
+ email_alt
+Customer identification details.
+ `firstname`: First name.
+ `lastname`: Last name.
+ `mobile`: Primary mobile (used 
+for transaction lookup).
+ `mobile_alt`: Alternate mobile.
+ `email`: Email.
+ `email_alt`: Alternate email.
+String Mandatory
+metadata Source agent and device details String Mandatory
+agent
+ agentid
+ sub_agentid
+Agent details String Mandatory
+device
+ init_channel
+ Possible values
+ mobile
+ geocode
+ postal_code
+ 
+ ip
+ branch_code
+ terminalid
+ imei
+ mac
+ os
+ app
+ user_agent
+ device_fingerprint
+List of devices
+Channel initiating request
+Internet, Mobile, POS, ATM, 
+BankBranch, Kiosk, etc.
+ `mobile`: Customer’s mobile 
+number.
+ `geocode`: Geolocation of 
+customer or agent.
+ `postal_code`: Customer's postal 
+code.
+ `ip`: Customer's IP address.
+ `branch_code`: Bank branch code.
+ `terminalid`: POS/ATM terminal 
+ID.
+ `imei`: Mobile IMEI.
+ `mac`: Machine MAC address.
+ `os`: Operating system.
+ `app`: Customer’s app name.
+ `user_agent`: Browser's user 
+agent.
+ `device_fingerprint`: Device 
+fingerprint.
+String Mandatory
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 28 ---
+BoB BBPS COU Document v4.0.0
+26
+additional_info
+Attributes:
+ name
+ value
+Additional information
+ `name`: Parameter name.
+ `value`: Corresponding value.
+OptionalObject
+risk
+ score_provider
+ score_value
+ score_type
+Risk score details
+ `score_provider`: Risk score 
+provider.
+ `score_value`: Risk metric value.
+ `score_type`: Type of risk 
+addressed.
+ 
+Mandatory (for BBPSString
+billers)
+ 
+ 
+ 
+ 
+ 
+Approval workflow details. 
+ `requestid`: Unique maker request ID
+ `makerid`: Maker's user ID.
+ `maker_request_date`: Maker 
+creation date.
+ `approverid`: Approver's user ID.
+ `approval_date`: Approval date.
+String  Optional
+6.3 Sample Request Body
+{
+  "billerid": "BBPS00000NAT01",
+  "billeraccountid": "RELEN155187",
+  "validationid": "105107623578440111",
+  "currency": "356",
+  "payment_amount": "5.00",
+  "cou_conv_fee": "0.00",
+  "bou_conv_fee": "0.00",
+  "debit_amount": "550.00",
+  "payment_type": "instapay",
+  "payment_remarks": "Free text",
+  "source_ref_no": "acgtf22311100001",
+  "customer": {
+    "firstname": "Mayank",
+    "lastname": "Trivedi",
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+approval_details
+requestid 
+makerid 
+maker_request_d
+ate
+approverid 
+approval_date
+
+--- PAGE 29 ---
+BoB BBPS COU Document v4.0.0
+27
+    "mobile": "9800000000",
+    "email": " mayan.trivedi@billdesk.com "
+  },
+  "metadata": {
+    "agent": {
+      "agentid": "BD001MPY100000100001",
+      "sub_agentid": "BD001MPY11"
+    },
+    "device": {
+      "init_channel": "Internet",
+      "ip": "124.124.1.1",
+      "os": "iOS"
+    },
+    "additional_info": [
+      {
+        "name": "loginid",
+        "value": "AB45612"
+      },
+      {
+        "name": "branch_code",
+        "value": "8451321"
+      },
+      {}
+    ]
+  },
+  "approval_details": {
+    "requestid": "AB45612",
+    "makerid": "userid",
+    "maker_request_date": "22-08-2020 18:30:52",
+    "approverid": "userid",
+    "approval_date": "22-08-2020 18:30:52"
+  },
+  "payment_account": {
+    "payment_method": "CreditCard",
+    "cardholder_name": "John Doe",
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 30 ---
+BoB BBPS COU Document v4.0.0
+28
+    "enc_card_number": 
+"WFwtM7n1wbNAIQ1VSmpxLx0d7qKodUfIg+l2AXgQFN+RCviSAQnEUVBH2XrNpgt6uwL88+bAWARvb+4dd
+dxnS5bcNi0WY3y611STn+hy5ctJGMuNcGgbNZD11KjFJ2gW0lQOy93EGGjSRHKb7+LPFM1OxFiTHK/
+bWwtxD/
+1I6oEjszC8eg91aF307IYks3Nomgym9xuuj4vc+AqbqrIg0ZfwcRQppyvOmD5oEOYJFxaTsoLxqZp2OpJpjJ8R
+dVYRf1HxgKLftXmDGq5gfSf82++vNvxq7//
+fTvshP1j0K2e388YUzLhPVJ7x+lpQYjBSH8TdMfVDxsPq1fWdYexeog==",
+    "enc_card_expiry": "jFi+FU+Sg1vQPglaS2r1GPQG7x2dWzzbKbCc6jfDPP/nvG4IjKHsbVfwjBhDTW6iJsy0/
+qv4Lxn/cn9V0r1I/1Zq+4vUlXbs/UT1o3YMDO2nGmQnp3cEqK/
+1z8ozr0Bn1xYuRqBuOJeOlw0lFlezS2P8lHTE8p2wxFA6pJMFNNaiP73A0pbV0M1hxJy6FmkyS1k1LGpwKw
+D89B9XdCuCx1WoWIda+/XbFZ0rI2ctVmQGaZ5RKHGHZr1b/
+9eSXFtjE6uq7ViXdao2KADkPxF8x9SCxXYXmga8aBesjLz//wvo1R/
+UOAqBKZ3huCINLnRcHqS5z1fC82BDQNFSdaRDSA=="
+  },
+  "auth_code": "0012"
+}
+6.4 Response Body Parameters
+Parameters  Parameter description   Data type
+objectid Object id String
+sourceid Source id String
+customerid Customer Id String
+billerid Biller Id String
+biller_name Biller name String
+biller_category Biller Category String
+billeraccountid Biller Account ID String
+authenticators
+ parameter_name
+ value
+Authenticators
+with parameter_name & value
+String
+validationid Validation Id String
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 31 ---
+BoB BBPS COU Document v4.0.0
+29
+billlist
+ billid
+ biillperiod
+ objecteid
+ billnumber
+ billdate
+ billduedate
+ billamount
+ customer_name
+ early_billduedate
+ early_billdiscount
+ early_billamount
+ late_payment_charges
+ late_payment_amount
+ net_billamount
+ currency
+ description
+Bill List with the following attributes
+Bill ID
+Bill period
+Object ID
+Bill number
+Bill date
+Due date for the bill
+Bill amount
+Customer name
+Early bill due date
+Early bill discount
+Early bill amount
+Late payment charges
+Late payment amount
+Net bill amount
+Currency
+Description
+String
+additional_details
+ seq
+ label
+ value
+Additional Details with the following Attributes
+(seq, label, value)
+String
+line_items
+ description
+ amount
+Line Items
+(description & amount)
+String
+billstatus Bill Status String
+currency Currency String
+payment_amount Payment Amount String
+cou_conv_fee COU Conv Fee String
+bou_conv_fee BOU Conv Fee String
+debit_amount Debit Amount String
+payment_type Type of Payment String
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 32 ---
+BoB BBPS COU Document v4.0.0
+30
+payment_remarks Payment Remarks String
+source_ref_no Source Reference Number String
+bbps_ref_no BBPS Reference number String
+txn_date_time Transaction Date and Time String
+schedule_date Scheduled Date String
+payment_status Status of the payment String
+biller_approval_code Biller Approval Code String
+biller_status Biller Status String
+biller_status_desc Biller Status Description String
+payment_account
+ paymentaccountid
+ objectid
+ short_name
+ payment_method
+ card_start
+ card_end
+ cardholder_name
+Payment Account
+With these attributes
+(paymentaccountid, objectid, short_name, 
+payment_method, card_start, card_end, 
+cardholder_name
+String
+auth_code Authorized Code String
+additional_info
+ name
+ value
+Additional Information with name and value 
+attributes.
+String
+6.5 Sample Response Body
+{
+    "paymentid": "2906285783064576",
+    "objectid": "payment",
+    "sourceid": "mbanking",
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 33 ---
+BoB BBPS COU Document v4.0.0
+31
+    "customerid": "1234567890",
+    "billerid": "UPPCL0000UTP02",
+    "biller_name": "Uttar Pradesh Power Corp Ltd (UPPCL) - RURAL",
+    "biller_category": "Electricity",
+    "billeraccountid": "RELEN155187",
+    "authenticators": [],
+    "validationid": "2906285783064576",
+    "billlist": [
+        {
+            "billid": "2906285783064576",
+            "objectid": "bill",
+            "billerid": "UPPCL0000UTP02",
+            "sourceid": "mbanking",
+            "billperiod": "June",
+            "billnumber": "123450001",
+            "billdate": "2015-06-14",
+            "billduedate": "2017-06-30",
+            "billamount": "20000",
+            "customer_name": "Ashish",
+            "early_billduedate": "",
+            "early_billdiscount": "",
+            "early_billamount": "",
+            "late_payment_charges": "",
+            "late_payment_amount": "",
+            "authenticators": [],
+            "validationid": "2906285783064576",
+            "net_billamount": "",
+            "currency": "356",
+            "description": "Bill payment for Uttar Pradesh Power Corp Ltd (UPPCL) - RURAL",
+            "additional_details": [],
+            "line_items": [],
+            "billstatus": "paid"
+        }
+    ],
+    "currency": "356",
+    "payment_amount": "550.00",
+    "cou_conv_fee": "0.00",
+    "bou_conv_fee": "0.00",
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 34 ---
+BoB BBPS COU Document v4.0.0
+32
+    "debit_amount": "550.00",
+    "payment_type": "instapay",
+    "payment_remarks": "Free text",
+    "source_ref_no": "acgtf22311100001",
+    "bbps_ref_no": "IP115013160457090c87",
+    "txn_date_time": "",
+    "schedule_date": "",
+    "payment_status": "",
+    "biller_approval_code": "234323432",
+    "biller_status": "SUCCESS",
+    "biller_status_desc": "Successful",
+    "payment_account": {
+        "payment_method": "CreditCard",
+        "cardholder_name": "John Doe",
+        "enc_card_number": 
+"WFwtM7n1wbNAIQ1VSmpxLx0d7qKodUfIg+l2AXgQFN+RCviSAQnEUVBH2XrNpgt6uwL88+bAWARvb+4dd
+dxnS5bcNi0WY3y611STn+hy5ctJGMuNcGgbNZD11KjFJ2gW0lQOy93EGGjSRHKb7+LPFM1OxFiTHK/
+bWwtxD/
+1I6oEjszC8eg91aF307IYks3Nomgym9xuuj4vc+AqbqrIg0ZfwcRQppyvOmD5oEOYJFxaTsoLxqZp2OpJpjJ8R
+dVYRf1HxgKLftXmDGq5gfSf82++vNvxq7//
+fTvshP1j0K2e388YUzLhPVJ7x+lpQYjBSH8TdMfVDxsPq1fWdYexeog==",
+        "enc_card_expiry": "jFi+FU+Sg1vQPglaS2r1GPQG7x2dWzzbKbCc6jfDPP/
+nvG4IjKHsbVfwjBhDTW6iJsy0/qv4Lxn/cn9V0r1I/1Zq+4vUlXbs/UT1o3YMDO2nGmQnp3cEqK/
+1z8ozr0Bn1xYuRqBuOJeOlw0lFlezS2P8lHTE8p2wxFA6pJMFNNaiP73A0pbV0M1hxJy6FmkyS1k1LGpwKw
+D89B9XdCuCx1WoWIda+/XbFZ0rI2ctVmQGaZ5RKHGHZr1b/
+9eSXFtjE6uq7ViXdao2KADkPxF8x9SCxXYXmga8aBesjLz//wvo1R/
+UOAqBKZ3huCINLnRcHqS5z1fC82BDQNFSdaRDSA=="
+    },
+    "auth_code": "0012",
+    "additional_info": []
+}
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 35 ---
+BoB BBPS COU Document v4.0.0
+33
+7 ADD Favorite Biller API
+Description: This API facilitates adding a biller account for a biller and associating it with a specific 
+customer.
+Endpoint: /BOBCOU/BBPS/<sourceid>/customers/<customerid>/billpay/billeraccounts
+Method: POST
+7.1 Headers
+Content-Type: application/json
+Accept: application/json
+BD-Traceid: a453c1353
+BD-Timestamp: 20160528121320
+Authorization: HMACSignature 
+K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ:9a7f42489a7bb156dfeae15a302f
+855049af87fb265bdd9af7a46e6f4ee8effb
+7.2 Request Body Parameters
+Parameters                 
+             
+Parameter description  Data type Mandatory/ Optional/
+Conditional
+billerid Unique Biller ID assigned to each biller String Mandatory
+short_name Short Name assigned by the customer String Optional
+NOTE:
+The sourceid parameter must be provided by the API consumer, and its value may be one of the following 
+based on the user’s channel: mbanking, upi  fi, or feature-phone.
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 36 ---
+BoB BBPS COU Document v4.0.0
+34
+authenticators
+ parameter_name
+ value
+Authenticators
+Parameter Name
+Value
+Object
+String
+String
+Mandatory
+autopay_status Represent autopay status String Optional
+autopay_start_date Autopay start date String Conditional (Mandatory 
+- only if the autopay is to 
+be set for the payment 
+type of billers, i.e. 
+when  autopay_statu
+s  flag is Y)
+autopay_end_date Represent autopay end date String Conditional (Mandatory 
+- only if the autopay is to 
+be set for the payment 
+type of billers, i.e. 
+when  autopay_statu
+s  flag is Y)
+autopay_amount Autopay amount String Conditional (Mandatory 
+- 
+when  autopay_statu
+s  flag is Y in the 
+request)
+currency Currency type String Conditional
+frequency billing frequency or cycle of the biller 
+account
+String Conditional (Mandatory 
+- if the autopay_status 
+value is Y in the request, 
+and the biller is of 
+payment type.
+payment_account
+ short_name
+ payment_method
+ cardholder_name
+ enc_card_number
+ enc_card_expiry
+Payment account details provided by 
+the customer for making bill payment
+Short Name
+Payment Method
+Cardholder Name
+Encrypted card number
+Encrypted card expiry date
+Object
+String
+String
+String
+String
+Conditional (Mandatory 
+- 
+when  autopay_statu
+s  flag is Y in the 
+request)
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 37 ---
+BoB BBPS COU Document v4.0.0
+35
+customer
+ firstname
+ lastname
+ mobile
+ email
+Customer Details
+First Name
+last Name
+Mobile Number
+Email Address
+Object
+String
+String
+String
+String
+Mandatory
+metadata
+ agent
+ agentid
+ sub_agentid
+List of specific parameters that 
+identify the source agent and device
+Agent
+Agent ID
+Sub Agent ID
+Object
+String
+String
+String
+Mandatory
+device
+ init_channel
+ ip
+ mac
+Device
+Channel Initialization
+IP Address
+MAC Address
+Object
+String
+String
+String
+Mandatory
+additional_info
+ name
+ value
+Additional Information
+Name
+Value
+Object
+String
+String
+Optional
+approval_details
+ 
+ requestid
+ makerid
+ maker_request_dat
+e
+ approverid
+ approval_date
+Approval Details related to approval 
+workflow
+Request ID
+Maker ID
+Maker Request Date
+Approve ID
+Approval Date
+String
+String
+String
+String
+ 
+String
+String
+Optional
+7.3 Sample Request Body
+{
+    "billerid": "AVVNL0000RAJ01",
+    "short_name": "HOME2",
+    "authenticators": [
+        {
+            "parameter_name": "Consumer number",
+            "value": "111111111"
+        },
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 38 ---
+BoB BBPS COU Document v4.0.0
+36
+        {
+            "parameter_name": "Billing cycle",
+            "value": "02"
+        }
+    ],
+    "autopay_status": "Y",
+    "autopay_start_date": "07-02-2017",
+    "autopay_end_date": "07-02-2018",
+    "autopay_amount": "2500.00",
+    "currency": "356",
+    "frequency": "Monthly",
+    "payment_account": {
+        "short_name": "myCard",
+        "payment_method": "CreditCard",
+        "cardholder_name": "Deepankar Sr",
+        "enc_card_number": "xxxx",
+        "enc_card_expiry": "xxxx"
+    },
+    "customer": {
+        "firstname": "Mayan",
+        "lastname": "Trivedi",
+        "mobile": "9800000000",
+        "email": "mayan.trivedi@billdesk.com"
+    },
+    "metadata": {
+        "agent": {
+            "agentid": "BD001MPY100000100001",
+            "sub_agentid": "BD001MPY11"
+        },
+        "device": {
+            "init_channel": "Internet",
+            "ip": "124.124.1.1",
+            "mac": "11-AC-58-21-1B-AA"
+        },
+        "additional_info": [
+            {
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 39 ---
+BoB BBPS COU Document v4.0.0
+37
+                "name": "loginid",
+                "value": "AB45612"
+            },
+            {
+                "name": "branch_code",
+                "value": "8451321"
+            },
+            {}
+        ]
+    },
+    "approval_details": {
+        "requestid": "AB45612",
+        "makerid": "userid",
+        "maker_request_date": "22-08-2020 18:30:52",
+        "approverid": "userid",
+        "approval_date": "22-08-2020 18:30:52"
+    }
+}
+7.4 Response Body Parameters
+Parameters  Parameter description   Data type
+billeraccountid Biller Account ID String
+objectid Object ID String
+sourceid Source ID String
+billerid Biller ID String
+short_name Short Name String
+authenticators Authenticators Object
+seq Sequence String
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 40 ---
+BoB BBPS COU Document v4.0.0
+38
+parameter_name Parameter Name String
+value Value String
+status Status of the Operation. String
+registration_date Date of Registration. String
+autopay_status Autopay Status. String
+autopay_start_date Autopay Starting Date String
+autopay_end_date Autopay Ending Date String
+autopay_amount Autopay Amount String
+currency Currency String
+frequency Frequency String
+payment_account Payment Account Details Object
+short_name Short Name String
+payment_method Payment Method String
+cardholder_name Name of the Cardholder String
+enc_card_number Card Number String
+enc_card_expiry Card Expiry String
+activation_date Date of Activation String
+cprn Represent the customer presentment registration 
+number
+String
+customer Customer Detail Object
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 41 ---
+BoB BBPS COU Document v4.0.0
+39
+mobile Mobile Number of the Customer String
+Only for Failed Response
+statusCode Status Code of the Operation. String
+statusDescription Status Description of the Operation. String
+timeStamp Timestamp of the Failed Operation. Timestamp
+traceId Trace ID String
+data Data. String
+7.5 Sample Response Body
+7.5.1 Success
+{
+    "billeraccountid": "4181283386695680",
+    "objectid": "billeraccount",
+    "sourceid": "SRC01",
+    "billerid": "AVVNL0000RAJ01",
+    "short_name": "HOME2",
+    "authenticators": [
+        {
+            "seq": "1",
+            "parameter_name": "Billing cycle",
+            "value": "02"
+        },
+        {
+            "seq": "2",
+            "parameter_name": "Consumer number",
+            "value": "111111111"
+        }
+    ],
+    "status": "ACTIVE",
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 42 ---
+BoB BBPS COU Document v4.0.0
+40
+    "registration_date": "22-04-2025 16:40:08",
+    "autopay_status": "Y",
+    "autopay_start_date": "07-02-2017 00:00:00",
+    "autopay_end_date": "07-02-2018 00:00:00",
+    "autopay_amount": 2500,
+    "currency": "356",
+    "frequency": "Monthly",
+    "payment_account": {
+        "short_name": "myCard",
+        "payment_method": "CreditCard",
+        "cardholder_name": "Deepankar Sr",
+        "enc_card_number": "****",
+        "enc_card_expiry": "****"
+    },
+    "activation_date": "22-04-2025 16:40:08",
+    "cprn": "ISU12345",
+    "customer": {
+        "mobile": "9898990001"
+    }
+}
+7.5.2 Failed
+{
+    "status": "FAILED",
+    "statusCode": "1",
+    "statusDescription": "This biller is already marked as a favorite.",
+    "timeStamp": 1745479528811,
+    "traceId": "9af901afc0e646f0afc20a401d3e84f2",
+    "data": null
+}
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 43 ---
+BoB BBPS COU Document v4.0.0
+41
+8 Update Favorite Biller API
+Description: This API facilitates updating all the biller accounts through a customer ID.
+Endpoint: /BOBCOU/BBPS/<sourceid>/customers/<customerid>/billpay/billeraccounts/<billeraccountid>
+Method: PUT
+8.1 Headers
+Content-Type: application/json
+Accept: application/json
+BD-Traceid: a453c1353
+BD-Timestamp: 20160528121320
+Authorization: HMACSignature 
+K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ:0f883fadcc19632e8c5a6e5c1c6b
+0043b35e2432a7480034f25aacc58ca68594
+8.2 Request Body Parameters
+Parameters                 
+             
+Parameter description  Data type Mandatory/ Optional/
+Conditional
+short_name Short nickname assigned by the 
+customer for the biller account.
+String Optional
+autopay_status Whether the biller account is set up 
+for autopay or not.
+String Optional
+NOTE:
+The sourceid parameter must be provided by the API consumer, and its value may be one of the following 
+based on the user’s channel: mbanking, upi  fi, or feature-phone.
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 44 ---
+BoB BBPS COU Document v4.0.0
+42
+autopay_start_date Autopay Starting Date String Conditional (Mandatory - 
+when  autopay_statu
+s  flag is Y in the 
+request)
+autopay_end_date Autopay Ending Date String Conditional (Mandatory - 
+when  autopay_statu
+s  flag is Y in the 
+request)
+autopay_amount Autopay Amount String Conditional (Mandatory - 
+when  biller_type  is 
+PAYEE 
+for  billerid  in the 
+request)
+currency Currency String Conditional - ISO 
+currency code for any 
+attribute in biller object 
+where value is some 
+amount.
+frequency Frequency String Conditional (Mandatory -
+ the autopay_status 
+value is Y in the request 
+and the biller is of 
+payment type.
+payment_account
+ paymentaccountid
+Payment Account Details
+Payment Account ID
+Object
+String
+Conditional (Mandatory 
+-when  autopay_statu
+s  flag is Y in the 
+request)
+customer
+ firstname
+ lastname
+ mobile
+ email
+Customer Details
+First Name of the Customer
+Last Name of the Customer
+Mobile Number of the Customer
+Email ID of the Customer
+Object
+String
+String
+String
+String
+Mandatory
+metadata
+agent
+ agentid
+ sub_agentid
+Metadata
+Details of the Agents
+Agent ID
+Sub Agent ID
+Object
+String
+String
+String
+Mandatory
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 45 ---
+BoB BBPS COU Document v4.0.0
+43
+device
+ init_channel
+ ip
+ mac
+Device Details
+Initialize Channel
+IP Address
+MAC Address
+Object
+String
+String
+String
+Mandatory
+approval_details
+ requestid
+ makerid
+ maker_request_date
+ approverid
+ approval_date
+Approval Details
+Request ID
+Maker ID
+Maker Request Date
+Approver ID
+Approval date
+Object
+String
+String
+String
+String
+String
+Optional
+8.3 Sample Request Body
+{
+    "short_name": "HOME190",
+    "autopay_status": "Y",
+    "autopay_start_date": "07-02-2017",
+    "autopay_end_date": "07-02-2018",
+    "autopay_amount": "985.75",
+    "currency": "356",
+    "frequency": "Monthly",
+    "payment_account": {
+        "paymentaccountid": "789465464645"
+    },
+    "customer": {
+        "firstname": "Mayan",
+        "lastname": "Trivedi",
+        "mobile": "9800000000",
+        "email": " mayan.trivedi@billdesk.com "
+    },
+    "metadata": {
+        "agent": {
+            "agentid": "BD001MPY100000100001",
+            "sub_agentid": "BD001MPY11"
+        },
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 46 ---
+BoB BBPS COU Document v4.0.0
+44
+        "device": {
+            "init_channel": "Internet",
+            "ip": "124.124.1.1",
+            "mac": "11-AC-58-21-1B-AA"
+        }
+    },
+    "approval_details": {
+        "requestid": "AB45612",
+        "makerid": "userid",
+        "maker_request_date": "22-08-2020 18:30:52",
+        "approverid": "userid",
+        "approval_date": "22-08-2020 18:30:52"
+    }
+}
+8.4 Response Body Parameters
+Parameters  Parameter description   Data type
+data Fetched Data. Object
+billeraccountid Biller Account ID String
+objectid Object ID String
+sourceid Source ID String
+billerid Biller ID String
+short_name Short Name String
+authenticators Authenticators Object
+seq Sequence String
+parameter_name Parameter Name String
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 47 ---
+BoB BBPS COU Document v4.0.0
+45
+value Value String
+status Status of the Operation. String
+registration_date Date of Registration. String
+modified_date Date of Modification String
+autopay_status Autopay Status. String
+autopay_start_date Autopay Starting Date String
+autopay_end_date Autopay Ending Date String
+autopay_amount Autopay Amount String
+currency Currency String
+frequency Frequency String
+payment_account Payment Account Details Object
+paymentaccountid Payment Account ID. String
+Only for Failed Response
+statusCode Status Code of the Operation. String
+statusDescription Status Description of the Operation. String
+timeStamp Timestamp of the Failed Operation. Timestamp
+traceId Trace ID String
+data Data. String
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 48 ---
+BoB BBPS COU Document v4.0.0
+46
+8.5 Sample Response Body
+8.5.1 Success
+{
+    "billeraccountid": "4181283386695680",
+    "objectid": "billeraccount",
+    "sourceid": "SRC01",
+    "billerid": "AVVNL0000RAJ01",
+    "short_name": "HOME190",
+    "authenticators": [
+        {
+            "seq": "1",
+            "parameter_name": "Billing cycle",
+            "value": "02"
+        },
+        {
+            "seq": "2",
+            "parameter_name": "Consumer number",
+            "value": "111111111"
+        }
+    ],
+    "status": "ACTIVE",
+    "registration_date": "22-04-2025 16:40:08",
+    "modified_date": "24-04-2025 14:40:56",
+    "autopay_status": "Y",
+    "autopay_start_date": "07-02-2017 00:00:00",
+    "autopay_end_date": "07-02-2018 00:00:00",
+    "autopay_amount": 985.75,
+    "currency": "356",
+    "frequency": "Monthly",
+    "payment_account": {
+        "paymentaccountid": "789465464645"
+    }
+}
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 49 ---
+BoB BBPS COU Document v4.0.0
+47
+8.5.2 Failed
+{
+    "status": "FAILED",
+    "statusCode": "1",
+    "statusDescription": "Favourite biller not found for the given customer ID and biller ID",
+    "timeStamp": 1745485709472,
+    "traceId": "21633088583146679bd9335ac8b943c6",
+    "data": null
+}
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 50 ---
+BoB BBPS COU Document v4.0.0
+48
+9 Get Favorite Billers API
+Description: This API facilitates fetching all the biller accounts through a customer ID.
+Endpoint: /BOBCOU/BBPS/<sourceid>/customers/<customerid>/billpay/billeraccounts
+Method: GET
+9.1 Headers
+Content-Type: application/json
+Accept: application/json
+BD-Traceid: a453c1353
+BD-timestamp: 20160528121320
+Authorization: N/A
+Parameters  Parameter description   Data type
+data Fetched Data. Object
+billeraccountid Biller Account ID String
+objectid Object ID String
+sourceid Source ID String
+NOTE:
+The sourceid parameter must be provided by the API consumer, and its value may be one of the following 
+based on the user’s channel: mbanking, upi  fi, or feature-phone.
+9.2  Response Body Parameters
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 51 ---
+BoB BBPS COU Document v4.0.0
+49
+billerid Biller ID String
+short_name Short Name String
+authenticators Authenticators Object
+seq Sequence String
+parameter_name Parameter Name String
+value Value String
+status Status of the Operation. String
+registration_date Date of Registration. String
+modified_date Date of Modification String
+autopay_status Autopay Status. String
+autopay_start_date Autopay Starting Date String
+autopay_end_date Autopay Ending Date String
+autopay_amount Autopay Amount String
+currency Currency String
+frequency Frequency String
+payment_account Payment Account Details Object
+paymentaccountid Payment Account ID. String
+objectid Object ID String
+customerid Customer ID String
+short_name Short Name of Customer String
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 52 ---
+BoB BBPS COU Document v4.0.0
+50
+status Status of the Operation. String
+payment_method Payment Method. String
+card_start Card Start String
+card_end Card End String
+cardholder_name Card Holder’s Name String
+cprn CPRN - Represent the customer presentment 
+registration number
+String
+Only for Failed Response
+statusCode Status Code of the Operation. String
+statusDescription Status Description of the Operation. String
+timeStamp Timestamp of the Failed Operation. Timestamp
+traceId Trace ID String
+data Data. Object
+9.3 Sample Response Body
+9.3.1 Success
+{
+    "data": [
+        {
+            "billeraccountid": "4499774719401984",
+            "objectid": "billeraccount",
+            "sourceid": "SRC01",
+            "billerid": "TATASKY00NAT01",
+            "short_name": "Debjeet TV",
+            "authenticators": [
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 53 ---
+BoB BBPS COU Document v4.0.0
+51
+                {
+                    "seq": "1",
+                    "parameter_name": "Subscriber Number",
+                    "value": "7205504564"
+                }
+            ],
+            "status": "ACTIVE",
+            "registration_date": "23-04-2025 12:47:48",
+            "autopay_status": "Y",
+            "autopay_start_date": "25-04-2025 00:00:00",
+            "autopay_end_date": "30-04-2025 00:00:00",
+            "payment_amount": "300.00",
+            "currency": "356",
+            "frequency": "Annually",
+            "payment_account": {
+                "paymentaccountid": "4499774719401984",
+                "objectid": "paymentaccount",
+                "customerid": "1234567890",
+                "short_name": "",
+                "status": "ACTIVE",
+                "payment_method": "Internet Banking",
+                "card_start": "",
+                "card_end": "",
+                "cardholder_name": ""
+            },
+            "cprn": "ISU123456"
+        },
+        {
+            "billeraccountid": "3857469620625408",
+            "objectid": "billeraccount",
+            "sourceid": "SRC01",
+            "billerid": "TATASKY00NAT01",
+            "short_name": "home tv",
+            "authenticators": [
+                {
+                    "seq": "1",
+                    "parameter_name": "Subscriber Number",
+                    "value": "8798797979"
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 54 ---
+BoB BBPS COU Document v4.0.0
+52
+                }
+            ],
+            "status": "ACTIVE",
+            "registration_date": "22-04-2025 12:24:18",
+            "autopay_status": "Y",
+            "autopay_start_date": "24-04-2025 00:00:00",
+            "autopay_end_date": "29-04-2025 00:00:00",
+            "payment_amount": "9790.99",
+            "currency": "356",
+            "frequency": "Monthly",
+            "payment_account": {
+                "paymentaccountid": "3857469620625408",
+                "objectid": "paymentaccount",
+                "customerid": "1234567890",
+                "short_name": "",
+                "status": "ACTIVE",
+                "payment_method": "Internet Banking",
+                "card_start": "",
+                "card_end": "",
+                "cardholder_name": ""
+            },
+            "cprn": "ISU123456"
+        },
+        {
+            "billeraccountid": "3761840781271040",
+            "objectid": "billeraccount",
+            "sourceid": "SRC01",
+            "billerid": "BSNL00000NATHL",
+            "short_name": "HOME20",
+            "authenticators": [
+                {
+                    "seq": "1",
+                    "parameter_name": "Billing cycle",
+                    "value": "02"
+                },
+                {
+                    "seq": "2",
+                    "parameter_name": "Consumer number",
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 55 ---
+BoB BBPS COU Document v4.0.0
+53
+                    "value": "111111111"
+                }
+            ],
+            "status": "ACTIVE",
+            "registration_date": "21-04-2025 12:24:10",
+            "autopay_status": "Y",
+            "autopay_start_date": "09-02-2017 00:00:00",
+            "autopay_end_date": "09-02-2018 00:00:00",
+            "payment_amount": "2500.00",
+            "currency": "356",
+            "frequency": "Monthly",
+            "payment_account": {
+                "paymentaccountid": "3761840781271040",
+                "objectid": "paymentaccount",
+                "customerid": "1234567890",
+                "short_name": "myCard",
+                "status": "ACTIVE",
+                "payment_method": "CreditCard",
+                "card_start": "xxxx",
+                "card_end": "xxxx",
+                "cardholder_name": "Deepankar Sr"
+            },
+            "cprn": "ISU12345"
+        },
+        {
+            "billeraccountid": "4176964159545344",
+            "objectid": "billeraccount",
+            "sourceid": "SRC01",
+            "billerid": "CONBB0000PUN01",
+            "short_name": "HOME19",
+            "authenticators": [
+                {
+                    "seq": "1",
+                    "parameter_name": "Billing cycle",
+                    "value": "02"
+                },
+                {
+                    "seq": "2",
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 56 ---
+BoB BBPS COU Document v4.0.0
+54
+                    "parameter_name": "Consumer number",
+                    "value": "111111111"
+                }
+            ],
+            "status": "ACTIVE",
+            "registration_date": "22-04-2025 16:09:37",
+            "autopay_status": "Y",
+            "autopay_start_date": "09-02-2017 00:00:00",
+            "autopay_end_date": "09-02-2018 00:00:00",
+            "payment_amount": "2500.00",
+            "currency": "356",
+            "frequency": "Monthly",
+            "payment_account": {
+                "paymentaccountid": "4176964159545344",
+                "objectid": "paymentaccount",
+                "customerid": "1234567890",
+                "short_name": "myCard",
+                "status": "ACTIVE",
+                "payment_method": "CreditCard",
+                "card_start": "xxxx",
+                "card_end": "xxxx",
+                "cardholder_name": "Deepankar Sr"
+            },
+            "cprn": "ISU12345"
+        },
+        {
+            "billeraccountid": "3761840793853952",
+            "objectid": "billeraccount",
+            "sourceid": "SRC01",
+            "billerid": "CARI00000NATN8",
+            "short_name": "gyan",
+            "authenticators": [
+                {
+                    "seq": "1",
+                    "parameter_name": "Bill Number",
+                    "value": "12345676"
+                }
+            ],
+ ©iServeU Technology Pvt. Ltd
+Duplication is Prohibited
+
+
+--- PAGE 57 ---
+BoB BBPS COU Document v4.0.0
+55
+            "status": "ACTIVE",
+            "registration_date": "21-04-2025 12:24:37",
+            "autopay_status": "N",
+            "autopay_start_date": null,
+            "autopay_end_date": null,
+            "payment_amount": "0.00",
+            "currency": "356",
+            "frequency": "Monthly",
+            "payment_account": {
+                "paymentaccountid": "3761840793853952",
+                "objectid": "paymentaccount",
+                "customerid": "1234567890",
+                "short_name": "",
+                "status": "ACTIVE",
+                "payment_method": "",
+                "card_start": "",
+                "card_end": "",
+                "cardholder_name": ""
+            },
+            "cprn": ""
+        },
+        {
+            "billeraccountid": "4181875832135680",
+            "objectid": "billeraccount",
+            "sourceid": "SRC01",
+            "billerid": "BESCOM000KAR01",
+            "short_name": "HOME19",
+            "authenticators": [
+                {
+                    "seq": "1",
+                    "parameter_name": "Billing cycle",
+                    "value": "02"
+                }
+            ],
+            "status": "ACTIVE",
+            "registration_date": "22-04-2025 16:47:40",
+            "autopay_status": "N",
+            "autopay_start_date": null,
+
+
+--- PAGE 58 ---
+BoB BBPS COU Document v4.0.0
+56
+            "autopay_end_date": null,
+            "payment_amount": "0.00",
+            "currency": "356",
+            "frequency": "Monthly",
+            "payment_account": {
+                "paymentaccountid": "4181875832135680",
+                "objectid": "paymentaccount",
+                "customerid": "1234567890",
+                "short_name": "",
+                "status": "ACTIVE",
+                "payment_method": "",
+                "card_start": "",
+                "card_end": "",
+                "cardholder_name": ""
+            },
+            "cprn": ""
+        }
+    ]
+}
+9.3.2 Failed
+{
+    "status": "FAILED",
+    "statusCode": "1",
+    "statusDescription": "No favorite billers have been added for this customer.",
+    "timeStamp": 1745487217480,
+    "traceId": "a1712aeb072a4eaf98a2e202dfafdf6b",
+    "data": null
+}
+
+
+--- PAGE 59 ---
+BoB BBPS COU Document v4.0.0
+57
+10 Delete Favorite Biller API
+Description: This API facilitates deleting a biller account through the following request.
+Endpoint: /BOBCOU/BBPS/<sourceid>/customers/<customerid>/billpay/billeraccounts/<billeraccountid>
+Method: DELETE
+10.1 Headers
+Content-Type: application/json
+Accept: application/json
+BD-Traceid: a453c1353
+BD-timestamp: 20160528121320
+Authorization: HMACSignature 
+K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ:0f883fadcc19632e8c5a6e5c1c6b
+0043b35e2432a7480034f25aacc58ca68594
+10.2 Response Body Parameters
+Parameters  Parameter description   Data type
+billeraccountid Biller Account ID String
+objectid Object ID String
+sourceid Source ID String
+NOTE:
+The sourceid parameter must be provided by the API consumer, and its value may be one of the following 
+based on the user’s channel: mbanking, upi  fi, or feature-phone.
+
+
+--- PAGE 60 ---
+BoB BBPS COU Document v4.0.0
+58
+billerid Biller ID String
+short_name Short Name String
+authenticators Authenticators Object
+seq Sequence String
+parameter_name Parameter Name String
+value Value String
+status Status of the Operation. String
+registration_date Date of Registration. String
+deletion_date Date of Deletion. String
+Only for Failed Response
+statusCode Status Code of the Operation. String
+statusDescription Status Description of the Operation. String
+timeStamp Timestamp of the Failed Operation. Timestamp
+traceId Trace ID String
+data Data. String
+10.3 Sample Response Body
+10.3.1 Success
+{
+    "billeraccountid": "4181283386695680",
+    "objectid": "billeraccount",
+    "sourceid": "SRC01",
+
+
+--- PAGE 61 ---
+BoB BBPS COU Document v4.0.0
+59
+    "billerid": "AVVNL0000RAJ01",
+    "short_name": "HOME190",
+    "authenticators": [
+        {
+            "seq": "1",
+            "parameter_name": "Billing cycle",
+            "value": "02"
+        },
+        {
+            "seq": "2",
+            "parameter_name": "Consumer number",
+            "value": "111111111"
+        }
+    ],
+    "status": "DELETED",
+    "registration_date": "22-04-2025 16:40:08",
+    "deletion_date": "24-04-2025 15:08:11"
+}
+Failed
+{
+    "status": "FAILED",
+    "statusCode": "1",
+    "statusDescription": "Biller is already deleted or inactive.",
+    "timeStamp": 1745487584344,
+    "traceId": "824d29581a78448e8f45dff5ee85a4e6",
+    "data": null
+}
+
+
+--- PAGE 62 ---
+BoB BBPS COU Document v4.0.0
+60
+11 Fetch by Billers ID API
+Description: This API used to retrieve detailed information about a specific biller using its unique Biller ID.
+Endpoint:  /BOBCOU/BBPS/<sourceid>/billpay/billers/<billerid>
+Endpoint Example: /BOBCOU/BBPS/upi/billpay/billers/AIRT00000NAT87
+Method: GET
+11.1 Headers
+Content-Type: application/json
+Accept: application/json
+BD-Traceid: a453c1353
+BD-Timestamp: 20160528121320
+Authorization: HMACSignature 
+K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ:5ff0351eae3c3ef5016d87d83d7a0
+c57c0ae2c61dddc7943350b0fc809f399ca
+11.2 Response Body Parameters
+Parameters  Parameter description   Data type
+billerid Unique Identifier for the Biller String
+NOTE:
+The sourceid parameter must be provided by the API consumer, and its value may be one of the following 
+based on the user’s channel: mbanking, upi  fi, or feature-phone.
+
+
+--- PAGE 63 ---
+BoB BBPS COU Document v4.0.0
+61
+objectid Object ID String
+sourceid Unique Identifier for the Source String
+biller_legal_name Legal Name of the Biller String
+biller_name Name of the Biller String
+biller_location Biller Location String
+biller_location_desc Biller Location Description String
+biller_category Category under which the Biller falls. String
+biller_reg_address Registered Address of the Biller String
+biller_reg_city Registered City of the Biller. String
+biller_reg_pin Biller’s registered PIN (address) String
+biller_reg_state Registered State of the Biller String
+biller_reg_country Registered Country of the Biller. String
+isbillerbbps Is Biller BBPS or not. String
+currency Currency String
+biller_type Biller Type String
+biller_mode Biller Mode String
+allowed_payment_methods Allowed Payment Methods String
+payment_method Payment Method. String
+payment_method_category Category of the Payment Method. String
+min_limit Minimum payment amount String
+
+
+--- PAGE 64 ---
+BoB BBPS COU Document v4.0.0
+62
+max_limit Maximum payment amount String
+autopay_allowed Autopay is allowed or not String
+paylater_allowed Is Paylater allowed or not String
+payment_channels Payment Channel Details String
+payment_channel Payment Channel String
+min_limit Minimum Limit String
+max_limit Maximum Limit String
+biller_effective_from Biller is Effective from (Date) String
+biller_effective_to Biller is Effective up to (Date) String
+biller_status Status of the Biller String
+temp_deactivation_start Date when Temporary Deactivation Started. String
+temp_deactivation_end Date when Temporary Deactivation Ended. String
+biller_created_date Biller creation Date String
+biller_lastmodified_date Date on which the Biller was last modified. String
+authenticators Authenticators Object
+seq Sequence String
+parameter_name Parameter Name String
+data_type Data type of the parameter String
+optional Is optional or not String
+regex REGEX String
+
+
+--- PAGE 65 ---
+BoB BBPS COU Document v4.0.0
+63
+error_message Error Message String
+encryption_required Encryption is required or not String
+list_of_values List of values Object
+biller_logo Biller Logo String
+biller_bill_copy Biller’s copy of the Bill String
+biller_remarks Biller Remarks String
+partial_pay Partial Pay String
+partial_pay_amount Partial Pay Amount String
+pay_after_duedate Payment after due date String
+online_validation Online Validation String
+customer_conv_fee Customer Convenience Fee Charged String
+plan_available Plans Available String
+paymentamount_validation Payment Amount Validation String
+additional_validation_detail
+s
+Other Additional Validation Details String
+11.3 Sample Response Body
+Success
+{
+    "billerid": "AIRT00000NAT87",
+    "objectid": "biller",
+    "sourceid": "upi",
+    "biller_legal_name": "Airtel DTH",
+    "biller_name": "Airtel DTH",
+
+
+--- PAGE 66 ---
+BoB BBPS COU Document v4.0.0
+64
+    "biller_location": "",
+    "biller_location_desc": "IND",
+    "biller_category": "DTH",
+    "biller_reg_address": "",
+    "biller_reg_city": "",
+    "biller_reg_pin": "",
+    "biller_reg_state": "",
+    "biller_reg_country": "",
+    "isbillerbbps": "",
+    "currency": "",
+    "biller_type": "Biller",
+    "biller_mode": "ONLINE",
+    "allowed_payment_methods": [
+        {
+            "payment_method": "Internet Banking",
+            "payment_method_category": "Internet Banking",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "Y"
+        },
+        {
+            "payment_method": "Debit Card",
+            "payment_method_category": "Debit Card",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "Y"
+        },
+        {
+            "payment_method": "Credit Card",
+            "payment_method_category": "Credit Card",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "Y"
+        },
+        {
+
+
+--- PAGE 67 ---
+BoB BBPS COU Document v4.0.0
+65
+            "payment_method": "Prepaid Card",
+            "payment_method_category": "Prepaid Card",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "Y"
+        },
+        {
+            "payment_method": "IMPS",
+            "payment_method_category": "IMPS",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "Y"
+        },
+        {
+            "payment_method": "Cash",
+            "payment_method_category": "Cash",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "N"
+        },
+        {
+            "payment_method": "UPI",
+            "payment_method_category": "UPI",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "Y"
+        },
+        {
+            "payment_method": "Wallet",
+            "payment_method_category": "Wallet",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "Y"
+
+
+--- PAGE 68 ---
+BoB BBPS COU Document v4.0.0
+66
+        },
+        {
+            "payment_method": "NEFT",
+            "payment_method_category": "NEFT",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "Y"
+        },
+        {
+            "payment_method": "AEPS",
+            "payment_method_category": "AEPS",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "Y"
+        },
+        {
+            "payment_method": "Account Transfer",
+            "payment_method_category": "Account Transfer",
+            "min_limit": "5000",
+            "max_limit": null,
+            "autopay_allowed": "",
+            "paylater_allowed": "Y"
+        }
+    ],
+    "payment_channels": [
+        {
+            "payment_channel": "INT",
+            "min_limit": "5000",
+            "max_limit": "1499900"
+        },
+        {
+            "payment_channel": "INTB",
+            "min_limit": "5000",
+            "max_limit": "1499900"
+        },
+        {
+
+
+--- PAGE 69 ---
+BoB BBPS COU Document v4.0.0
+67
+            "payment_channel": "MOB",
+            "min_limit": "5000",
+            "max_limit": "14999900"
+        },
+        {
+            "payment_channel": "MOBB",
+            "min_limit": "5000",
+            "max_limit": "1499900"
+        },
+        {
+            "payment_channel": "POS",
+            "min_limit": "5000",
+            "max_limit": "1499900"
+        },
+        {
+            "payment_channel": "MPOS",
+            "min_limit": "5000",
+            "max_limit": "1499900"
+        },
+        {
+            "payment_channel": "ATM",
+            "min_limit": "5000",
+            "max_limit": "1499900"
+        },
+        {
+            "payment_channel": "BNKBRNCH",
+            "min_limit": "5000",
+            "max_limit": "1499900"
+        },
+        {
+            "payment_channel": "KIOSK",
+            "min_limit": "5000",
+            "max_limit": "1499900"
+        },
+        {
+            "payment_channel": "AGT",
+            "min_limit": "5000",
+            "max_limit": "1499900"
+
+
+--- PAGE 70 ---
+BoB BBPS COU Document v4.0.0
+68
+},
+{
+"payment_channel": "BSC",
+"min_limit": "5000",
+"max_limit": "1499900"
+  }
+],
+"biller_effective_from": "24-12-2019",
+"biller_effective_to": "24-12-2029",
+"biller_status": "ACTIVE",
+"temp_deactivation_start": "",
+"temp_deactivation_end": "",
+"biller_created_date": "",
+"biller_lastmodified_date": "",
+"authenticators": [
+{
+"seq": "1",
+"parameter_name": "Customer Id",
+"data_type": "NUMERIC",
+"optional": false,
+"regex": "^[0-9]{10}$",
+"error_message": "Please enter a valid Customer Id",
+"encryption_required": null,
+  "list_of_values": []
+}
+],
+"biller_logo": "",
+"biller_bill_copy": "",
+"biller_remarks": "",
+"partial_pay": "",
+"partial_pay_amount": "",
+"pay_after_duedate": "",
+"online_validation": "",
+"customer_conv_fee": null,
+"plan_available": null,
+"paymentamount_validation": null,
+"additional_validation_details": ""
+}
+
+
+--- PAGE 71 ---
+BoB BBPS COU Document v4.0.0
+69
+Failed
+{
+"status": 500,
+"error_type": "fetch_biller_by_billerid_error",
+"error_code": "ERR01FBB",
+"message": "Internal Server Error",
+"metadata": [
+{
+"name": "traceId",
+"value": "291348cb1fc6450ab516c3ba8f9dd382"
+}
+]
+}
+
+
+--- PAGE 72 ---
+BoB BBPS COU Document v4.0.0
+70
+12 Oneview API
+Description: Oneview API under the BBPS framework provides a consolidated view of biller accounts and 
+bill details for a given customerid. The goal is to streamline the registration and bill-fetching experience for 
+clients by providing a single endpoint that aggregates biller account and corresponding bills data.
+Endpoint:  /BOBCOU/BBPS/mbanking/customers/<customerid>/billpay/oneview?
+billeraccountid=<billeraccountid>&status=<status>&billid=<billid>
+Endpoint Example: /BOBCOU/BBPS/mbanking/customers/1234567890/billpay/oneview?
+billeraccountid=4958397710934016&status=EXPIRED&billid=BILL1
+Method: GET
+12.1 Headers
+Content-Type: application/json
+Accept: application/json
+BD-Traceid: a453c1353
+BD-Timestamp: 20160528121320
+Authorization: HMACSignature 
+K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ:5ff0351eae3c3ef5016d87d83d7a0
+c57c0ae2c61dddc7943350b0fc809f399ca
+NOTE:
+Change the Authorization and pass HMACSignature dynamically for all requests.
+12.2 Response Body Parameters
+Parameters  Parameter description   Data type
+
+
+--- PAGE 73 ---
+BoB BBPS COU Document v4.0.0
+71
+objectid Object ID String
+sourceid Unique Identifier for the Source String
+customerid Customer ID String
+billeraccount Biller Account Details Object
+billeraccountid Biller Account ID String
+objectid Unique Identifier for the Object String
+billerid Biller ID String
+short_name Short Name String
+authenticators Authenticators Array
+seq Sequence String
+parameter_name Parameter Name String
+value Data type of the parameter String
+status Status String
+registration_date Registration Date String
+autopay_status Status of Autopay String
+autopay_start_date Date on which Autopay started String
+autopay_end_date End date of the Autopay String
+autopay_amount Amount to be paid through Autopay String
+frequency Frequency of Autopay String
+payment_account Payment Account String
+
+
+--- PAGE 74 ---
+BoB BBPS COU Document v4.0.0
+72
+billlist Bill List Array
+billid Unique Identifier of the Bill. Bill ID String
+objectid Object ID. String
+billnumber Bill Number String
+billperiod Bill period. String
+billdate Date of the Bill String
+billduedate Due date for the Bill String
+billamount Amount to be paid against the Bill. String
+early_billduedate Early Bill Due Date. String
+early_billdiscount Discount on Bill against early payment. String
+early_billamount Bill amount on early payment. String
+late_payment_charges Charges for late bill payment. String
+late_payment_amount Bill amount on late payment. String
+net_billamount Net Bill Amount. String
+description Description String
+additional_details Bill additional details Array
+seq Sequence String
+label Label String
+value Data type of the parameter String
+line_items Line Items Array
+
+
+--- PAGE 75 ---
+BoB BBPS COU Document v4.0.0
+73
+billstatus Status of the Bill String
+Exclusively for Failed Response
+error_type Error Type String
+error_code Error Code String
+message Message for the Operation. It signifies the result. String
+metadata Metadata Array
+name Name String
+value Value String
+12.3 Sample Response Body
+12.3.1 Success
+{
+    "objectid": "oneview",
+    "sourceid": "mbanking",
+    "customerid": "1234567890",
+    "billeraccount": {
+        "billeraccountid": "4958397710934016",
+        "objectid": "billeraccount",
+        "billerid": "TSTO00000NAT01",
+        "short_name": "TSTO",
+        "authenticators": [
+            {
+                "seq": 1,
+                "parameter_name": "Billing cycle",
+                "value": "02"
+            },
+            {
+                "seq": 2,
+                "parameter_name": "Consumer number",
+                "value": "12345676"
+            }
+        ],
+        "status": "ACTIVE",
+
+
+--- PAGE 76 ---
+BoB BBPS COU Document v4.0.0
+74
+        "registration_date": "Invalid date",
+        "autopay_status": "N",
+        "autopay_start_date": null,
+        "autopay_end_date": null,
+        "autopay_amount": null,
+        "frequency": null,
+        "payment_account": null
+    },
+    "billlist": [
+        {
+            "billid": "BILL1",
+            "objectid": "bill",
+            "billnumber": "123450001",
+            "billperiod": "June",
+            "billdate": "14-06-2015 05:30:00",
+            "billduedate": "30-06-2017 05:30:00",
+            "billamount": "20000.00",
+            "early_billduedate": null,
+            "early_billdiscount": null,
+            "early_billamount": null,
+            "late_payment_charges": null,
+            "late_payment_amount": "300.00",
+            "net_billamount": "20000.00",
+            "description": "Bill payment for TSTO",
+            "additional_details": [
+                {
+                    "seq": 1,
+                    "label": "Customer Name",
+                    "value": "Ashish"
+                },
+                {
+                    "seq": 2,
+                    "label": "billnumber",
+                    "value": "123450001"
+                },
+                {
+                    "seq": 3,
+                    "label": "billfor",
+                    "value": "June 2015"
+                }
+            ],
+            "line_items": [],
+            "billstatus": "EXPIRED"
+        }
+    ]
+}
+
+
+--- PAGE 77 ---
+BoB BBPS COU Document v4.0.0
+75
+12.3.2 Failed
+{
+    "status": 400,
+    "error_type": "fetch_favourite_biller_accounts_error",
+    "error_code": "ERR01FFBA",
+    "message": "No favorite billers have been added for this customer.",
+    "metadata": [
+        {
+            "name": "traceId",
+            "value": "f8450cd6ce7a4d54913fc383c74fd666"
+        }
+    ]
+}
+
+
+--- PAGE 78 ---
+BoB BBPS COU Document v4.0.0
+76
+13 Fetch Prepaid Plans API
+ 
+Endpoint: /BOBCOU/BBPS/<sourceid>/billpay/plans
+Example - /BOBCOU/BBPS/<sourceid>/billpay/plans?billerid=BSNL00000NATHL&circle_name=Jammu And 
+Kashmir&planid=6&plan_category_name=1month
+Method: GET
+NOTE:
+Please change the Authorization, pass HMACSignature dynamically for the request.
+INSTRUCTIONS:
+Please use the clientId & secretKey provided below to generate HMACSignature -
+Staging=>
+clientId: K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ
+secretKey:
+de23da949cc44ed47cd30236089096e9576c2cc38695cf2127be804c4620c90be7ccf066d06b69767cf2937
+7419c7cd6880aa3fc460ec200035034ecec8bf408
+13.1 Headers
+Content-Type: application/json
+Accept: application/json
+BD-Traceid: a453c1353
+BD-Timestamp: 20160528121320
+Authorization: HMACSignature 
+K3U4UPRTORN2HMHYGYCKRUBMLLTFKWIDZ6EJKYY2Z3FT72F3WIRQ:5ff0351eae3c3ef5016d87d83d7a0
+c57c0ae2c61dddc7943350b0fc809f399ca
+Description:This API enables the system to retrieve available prepaid recharge plans for a selected 
+operator & circle.
+
+
+--- PAGE 79 ---
+BoB BBPS COU Document v4.0.0
+77
+Query Params Request body:
+billerid=BSNL00000NATHL &circle_name=Jammu And Kashmir&planid=6&plan_category_name=1month
+13.2 Request Details
+Parameters                 
+             
+Parameter description  Data type Mandatory/ Optional/
+Conditional
+billerid Unique Biller ID assigned to each biller String Mandatory
+circle_name Name of the circle String Mandatory
+planid Plan ID String Mandatory
+plan_category_name Name of the plan category String Mandatory
+13.3 Response Body Parameters
+Parameters Parameter description  Data type
+data Fetched Data Object
+planid Plan ID String
+objectid Object ID String
+billerid Unique Identifier for the Biller String
+biller_name Name of the Biller String
+biller_category Category under which the Biller falls. String
+circle_name Name of the circle String
+circleid Circle ID String
+
+
+--- PAGE 80 ---
+BoB BBPS COU Document v4.0.0
+78
+plan_category_name Name of the plan category String
+talktime Talk time provided for a particular plan String
+amount Amount String
+validity Validity of the talk time String
+plan_description Description of the selected plan String
+additional_info Additional Information Object
+parameter_name Name of the parameter String
+value Value corresponding to the parameter String
+plan_created_on When plan was created. String
+plan_status Status of the plan String
+plan_validity Validity of the plan String
+cat_seq Category Sequence Number String
+plan_seq Plan Sequence Number String
+plan_name Name of the plan String
+For Failed Scenario
+error_type Type of Error Integer
+error_code Error Code String
+message Message describing the error String
+metadata Metadata Object
+name Name String
+
+
+--- PAGE 81 ---
+BoB BBPS COU Document v4.0.0
+79
+value Value String
+13.4 Sample Response Body
+13.4.1 Success
+{
+    "data": [
+        {
+            "planid": "6",
+            "objectid": "plan",
+            "billerid": "BSNL00000NATHL",
+            "biller_name": "BSNL",
+            "biller_category": "Mobile Prepaid",
+            "circle_name": "Jammu And Kashmir",
+            "circleid": null,
+            "plan_category_name": "1 Month",
+            "talktime": "100",
+            "amount": "999.0",
+            "validity": "1 Month",
+            "plan_description": "HD Quality Music 10 Million Songs and Music Videos Unlimited Downloads on 
+the Hungama Music app Ad-Free Experience on the Hungama Music app Use your subscription on up to 5 
+devices",
+            "additional_info": [
+                {
+                    "parameter_name": "Talktime",
+                    "value": "100"
+                },
+                {
+                    "parameter_name": "Validity",
+                    "value": "1 Month"
+                },
+                {
+                    "parameter_name": "Data",
+                    "value": "1 GB per day"
+                },
+                {
+                    "parameter_name": "Circle",
+                    "value": "Jammu And Kashmir"
+                },
+                {
+                    "parameter_name": "Plan Type",
+                    "value": "Unlimited"
+                },
+                {
+                    "parameter_name": "Additional Benefits",
+
+
+--- PAGE 82 ---
+BoB BBPS COU Document v4.0.0
+80
+                    "value": "Premium Customer Support and 14 OTT Apps"
+                }
+            ],
+            "plan_created_on": null,
+            "plan_status": "ACTIVE",
+            "plan_validity": "1 Month",
+            "cat_seq": null,
+            "plan_seq": null,
+            "plan_name": null
+        }
+    ]
+}
+13.4.2 Failed
+13.4.2.1 Fetch Prepaid Plan Error
+{
+    "status": 400,
+    "error_type": "fetch_prepaid_plan_error",
+    "error_code": "104",
+    "message": "No biller found for the provided IDs.",
+    "metadata": [
+        {
+            "name": "traceId",
+            "value": "4a6baeaeb93049ca8d7e6c365f9fef1b"
+        }
+    ]
+}
+
+
+--- PAGE 83 ---
+BoB BBPS COU Document v4.0.0
+81
+        }
+    ]
+}
+13.4.2.2 No Plans Found
+{
+    "status": 404,
+    "error_type": "no_plans_found",
+    "error_code": "ERR01FPP",
+    "message": "No prepaid plans found for the given criteria.",
+    "metadata": [
+        {
+            "name": "traceId",
+            "value": 1770618911946
+ 
+THANK YOU 
+iServeU Technology Pvt. Ltd. 
+www.iserveu.in info@iserveu.in | support@iserveu.in | 
+
+

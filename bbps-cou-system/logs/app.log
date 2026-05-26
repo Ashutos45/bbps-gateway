@@ -1,0 +1,4 @@
+2026-05-25 20:37:26.847 | INFO     | app.core.logger:setup_logger:39 - Centralized logging has been successfully configured.
+2026-05-25 20:37:28.376 | INFO     | app.core.logger:setup_logger:39 - Centralized logging has been successfully configured.
+2026-05-25 20:37:28.379 | INFO     | app.main:on_startup:28 - Initializing database tables...
+2026-05-25 20:37:28.395 | INFO     | app.main:on_startup:31 - Database initialized successfully.

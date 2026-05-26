@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: bbps_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Ashu@123
+      POSTGRES_DB: bbps_gateway_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: ./backend-gateway
+      dockerfile: Dockerfile
+    container_name: bbps_gateway_web
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:Ashu%40123@db:5432/bbps_gateway_db
+      - HOST=0.0.0.0
+      - PORT=8000
+      - ENV=staging
+      - DEBUG=true
+      - LOG_LEVEL=INFO
+      - ENABLE_CHAOS_MODE=true
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
