@@ -142,3 +142,63 @@ async def test_super_admin_provisioning_privilege_boundary():
             assert res_keys_failed.status_code == 403
     finally:
         await engine.dispose()
+
+@pytest.mark.asyncio
+async def test_admin_standalone_key_generation_and_self_signup():
+    """
+    Tests that a SUPER_ADMIN can pre-generate a standalone ADMIN_ACCESS_KEY,
+    and a new staff user can register themselves using that key.
+    """
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            # 1. Login as SUPER_ADMIN
+            sa_login = await ac.post("/auth/admin/token", json={
+                "username": "admin",
+                "password": "admin123",
+                "admin_access_key": "SUPER_KEY_123"
+            })
+            sa_token = sa_login.json()["access_token"]
+            sa_headers = {"Authorization": f"Bearer {sa_token}"}
+
+            # 2. Super Admin generates standalone key for AUDITOR role
+            gen_key_res = await ac.post(
+                "/auth/admin/generate-key", 
+                json={"role": "AUDITOR"}, 
+                headers=sa_headers
+            )
+            assert gen_key_res.status_code == 200
+            standalone_key = gen_key_res.json()["admin_access_key"]
+            assert standalone_key.startswith("ADM_")
+
+            # 3. New staff registers themselves with the key
+            new_staff_username = f"self_staff_{uuid.uuid4().hex[:6]}"
+            signup_payload = {
+                "username": new_staff_username,
+                "email": f"{new_staff_username}@bbps.com",
+                "password": "StaffPassword123!",
+                "admin_access_key": standalone_key
+            }
+            signup_res = await ac.post("/auth/admin/signup", json=signup_payload)
+            assert signup_res.status_code == 200
+            assert signup_res.json()["success"] is True
+
+            # 4. Attempt login as the new staff with the key
+            staff_login = await ac.post("/auth/admin/token", json={
+                "username": new_staff_username,
+                "password": signup_payload["password"],
+                "admin_access_key": standalone_key
+            })
+            assert staff_login.status_code == 200
+            assert staff_login.json()["role"] == Role.AUDITOR
+
+            # 5. Attempting to register another user with the same key must fail (it is now assigned/used)
+            dup_signup_payload = {
+                "username": f"dup_staff_{uuid.uuid4().hex[:6]}",
+                "email": f"dup_staff_{uuid.uuid4().hex[:6]}@bbps.com",
+                "password": "StaffPassword123!",
+                "admin_access_key": standalone_key
+            }
+            dup_res = await ac.post("/auth/admin/signup", json=dup_signup_payload)
+            assert dup_res.status_code == 401
+    finally:
+        await engine.dispose()

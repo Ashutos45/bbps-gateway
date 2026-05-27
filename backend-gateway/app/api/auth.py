@@ -53,6 +53,20 @@ class AdminCreateResponse(BaseModel):
     username: str
     admin_access_key: str
 
+class StandaloneKeyRequest(BaseModel):
+    role: str
+
+class StandaloneKeyResponse(BaseModel):
+    success: bool
+    role: str
+    admin_access_key: str
+
+class AdminSignupRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    admin_access_key: str
+
 class ResetPasswordRequest(BaseModel):
     new_password: str
 
@@ -74,6 +88,7 @@ class UserResponse(BaseModel):
 class AdminKeyResponse(BaseModel):
     id: str
     user_id: str
+    username: Optional[str] = None
     key_hash: str
     is_active: bool
     expires_at: Optional[datetime] = None
@@ -246,6 +261,134 @@ async def admin_login(request: AdminTokenRequest, db: AsyncSession = Depends(get
         "role": user.role
     }
 
+@router.post("/admin/generate-key", response_model=StandaloneKeyResponse)
+async def generate_standalone_key(
+    request: StandaloneKeyRequest,
+    req_obj: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role([Role.SUPER_ADMIN]))
+):
+    """
+    Allows SUPER_ADMIN to pre-generate a standalone ADMIN_ACCESS_KEY associated with a designated role.
+    """
+    role_upper = request.role.upper()
+    if role_upper not in (Role.ADMIN, Role.OPERATIONS, Role.AUDITOR):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid administrative role. Must be one of ADMIN, OPERATIONS, AUDITOR"
+        )
+
+    # Generate standalone key
+    raw_key = "ADM_" + secrets.token_hex(16)
+    access_key = AdminAccessKey(
+        user_id=None,  # unassigned
+        key_hash=get_password_hash(raw_key),
+        role=role_upper,
+        is_active=True,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=90)
+    )
+    db.add(access_key)
+    await db.commit()
+
+    # Log action
+    await log_admin_action(
+        db, 
+        current_user["username"], 
+        current_user["role"], 
+        "GENERATE_STANDALONE_KEY", 
+        f"Generated standalone key for role: {role_upper}",
+        req_obj
+    )
+
+    return {
+        "success": True,
+        "role": role_upper,
+        "admin_access_key": raw_key
+    }
+
+@router.post("/admin/signup", response_model=SignupResponse)
+async def admin_signup(
+    request: AdminSignupRequest,
+    req_obj: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Allows a new administrative staff user to register themselves using a valid standalone ADMIN_ACCESS_KEY.
+    """
+    # Check duplicate username
+    username_stmt = select(User).where(User.username == request.username)
+    username_res = await db.execute(username_stmt)
+    if username_res.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered"
+        )
+
+    # Check duplicate email
+    email_stmt = select(User).where(User.email == request.email)
+    email_res = await db.execute(email_stmt)
+    if email_res.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+
+    # Lookup unassigned and active admin access keys
+    key_stmt = select(AdminAccessKey).where(
+        AdminAccessKey.user_id == None,
+        AdminAccessKey.is_active == True
+    )
+    key_res = await db.execute(key_stmt)
+    keys = key_res.scalars().all()
+
+    target_key = None
+    for access_key in keys:
+        if access_key.expires_at and datetime.now(timezone.utc) > access_key.expires_at:
+            continue
+        if verify_password(request.admin_access_key, access_key.key_hash):
+            target_key = access_key
+            break
+
+    if not target_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized: Invalid, expired, or already used ADMIN_ACCESS_KEY."
+        )
+
+    target_role = target_key.role or Role.ADMIN
+
+    # Create the user
+    new_user_id = uuid.uuid4()
+    hashed_password = get_password_hash(request.password)
+    new_user = User(
+        id=new_user_id,
+        username=request.username,
+        email=request.email,
+        hashed_password=hashed_password,
+        role=target_role,
+        is_active=True
+    )
+    db.add(new_user)
+
+    # Bind key to user
+    target_key.user_id = new_user_id
+    await db.commit()
+
+    # Log action
+    await log_admin_action(
+        db,
+        request.username,
+        target_role,
+        "ADMIN_SELF_REGISTRATION",
+        f"Admin user registered themselves as role: {target_role} using access key",
+        req_obj
+    )
+
+    return {
+        "success": True,
+        "message": f"Administrative registration successful as role {target_role}"
+    }
+
 # --- Super Admin Operations (Restricted to SUPER_ADMIN) ---
 
 @router.post("/admin/users", response_model=AdminCreateResponse)
@@ -354,18 +497,20 @@ async def list_admin_keys(
     """
     Lists metadata and hashes of all provisioning access keys (SUPER_ADMIN only).
     """
-    stmt = select(AdminAccessKey)
-    keys = (await db.execute(stmt)).scalars().all()
+    stmt = select(AdminAccessKey, User.username).outerjoin(User, AdminAccessKey.user_id == User.id)
+    res = await db.execute(stmt)
+    rows = res.all()
     return [
         AdminKeyResponse(
-            id=str(key.id),
-            user_id=str(key.user_id),
-            key_hash=key.key_hash[:20] + "...", # obscure secret hash
-            is_active=key.is_active,
-            expires_at=key.expires_at,
-            created_at=key.created_at
+            id=str(row.AdminAccessKey.id),
+            user_id=str(row.AdminAccessKey.user_id) if row.AdminAccessKey.user_id else "",
+            username=row.username,
+            key_hash=row.AdminAccessKey.key_hash[:20] + "...", # obscure secret hash
+            is_active=row.AdminAccessKey.is_active,
+            expires_at=row.AdminAccessKey.expires_at,
+            created_at=row.AdminAccessKey.created_at
         )
-        for key in keys
+        for row in rows
     ]
 
 @router.post("/admin/users/{username}/regenerate-key", response_model=AdminCreateResponse)

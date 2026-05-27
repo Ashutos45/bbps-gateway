@@ -52,6 +52,8 @@ async def initialize_database():
                 await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS organization VARCHAR(100);"))
                 await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS company VARCHAR(100);"))
                 await conn.execute(text("UPDATE users SET role = 'OPERATIONS' WHERE role = 'OPERATOR';"))
+                await conn.execute(text("ALTER TABLE admin_access_keys ALTER COLUMN user_id DROP NOT NULL;"))
+                await conn.execute(text("ALTER TABLE admin_access_keys ADD COLUMN IF NOT EXISTS role VARCHAR(30);"))
             except Exception as e:
                 logger.warning(f"Note on migration execution: {e}")
         logger.info("Database tables initialized successfully.")
@@ -204,6 +206,7 @@ async def initialize_database():
                         access_key = AdminAccessKey(
                             user_id=u_id,
                             key_hash=get_password_hash(user_data["key"]),
+                            role=user_data["role"],
                             is_active=True
                         )
                         session.add(access_key)

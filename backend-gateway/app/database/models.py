@@ -99,8 +99,9 @@ class AdminAccessKey(Base):
     __tablename__ = "admin_access_keys"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), index=True, nullable=False)
+    user_id = Column(UUID(as_uuid=True), index=True, nullable=True)
     key_hash = Column(String(255), unique=True, index=True, nullable=False)
+    role = Column(String(30), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
