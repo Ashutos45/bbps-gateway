@@ -63,8 +63,8 @@ async def test_rbac_boundary_restrictions():
   """
   try:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-      # 1. Login as operator
-      login_res = await ac.post("/auth/token", json={"username": "operator", "password": "operator123"})
+      # 1. Login as operations
+      login_res = await ac.post("/auth/token", json={"username": "operations", "password": "operations123"})
       operator_token = login_res.json()["access_token"]
       
       url_init = "/BOBCOU/BBPS/mbanking/billpay/billers/file"
@@ -142,3 +142,73 @@ async def test_expired_jwt_and_download_tokens():
       assert "expired signed url token" in res_expired_download.json()["detail"].lower()
   finally:
     await engine.dispose()
+
+@pytest.mark.asyncio
+async def test_admin_provisioning_and_lifecycles():
+  """
+  Tests Admin-only provisioning, user activation/deactivation lifecycles,
+  role updates, and password resets.
+  """
+  try:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+      # 1. Login as Admin
+      admin_login = await ac.post("/auth/token", json={"username": "admin", "password": "admin123"})
+      admin_token = admin_login.json()["access_token"]
+      admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+      # 2. Block public signup (calling signup without headers should return 401/403)
+      signup_body = {
+        "username": "provisioned_client",
+        "email": "prov_client@bbps.com",
+        "password": "ClientPassword123!",
+        "role": "CLIENT"
+      }
+      res_public_signup = await ac.post("/auth/signup", json=signup_body)
+      assert res_public_signup.status_code in (401, 403)
+
+      # 3. Provision client via Admin
+      res_admin_signup = await ac.post("/auth/signup", json=signup_body, headers=admin_headers)
+      assert res_admin_signup.status_code == 200
+      assert res_admin_signup.json()["success"] is True
+
+      # 4. Successful login of provisioned client
+      client_login = await ac.post("/auth/token", json={"username": "provisioned_client", "password": "ClientPassword123!"})
+      assert client_login.status_code == 200
+      assert client_login.json()["role"] == "CLIENT"
+
+      # 5. Deactivate user via Admin
+      res_deactivate = await ac.post("/auth/users/provisioned_client/toggle-active", headers=admin_headers)
+      assert res_deactivate.status_code == 200
+      assert res_deactivate.json()["success"] is True
+
+      # 6. Block login of deactivated user
+      client_login_blocked = await ac.post("/auth/token", json={"username": "provisioned_client", "password": "ClientPassword123!"})
+      assert client_login_blocked.status_code == 403
+      assert "deactivated" in client_login_blocked.json()["detail"].lower()
+
+      # 7. Reactivate user via Admin
+      res_reactivate = await ac.post("/auth/users/provisioned_client/toggle-active", headers=admin_headers)
+      assert res_reactivate.status_code == 200
+
+      # 8. Successful login of reactivated user
+      client_login_again = await ac.post("/auth/token", json={"username": "provisioned_client", "password": "ClientPassword123!"})
+      assert client_login_again.status_code == 200
+
+      # 9. Change user role to OPERATIONS
+      res_role = await ac.post("/auth/users/provisioned_client/role", json={"role": "OPERATIONS"}, headers=admin_headers)
+      assert res_role.status_code == 200
+
+      # 10. Verify role update in login
+      client_login_ops = await ac.post("/auth/token", json={"username": "provisioned_client", "password": "ClientPassword123!"})
+      assert client_login_ops.json()["role"] == "OPERATIONS"
+
+      # 11. Reset user password
+      res_reset = await ac.post("/auth/users/provisioned_client/reset-password", json={"new_password": "NewSecretPassphrase1!"}, headers=admin_headers)
+      assert res_reset.status_code == 200
+
+      # 12. Login with new password
+      client_login_new_pass = await ac.post("/auth/token", json={"username": "provisioned_client", "password": "NewSecretPassphrase1!"})
+      assert client_login_new_pass.status_code == 200
+  finally:
+    await engine.dispose()
+

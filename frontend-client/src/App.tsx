@@ -13,8 +13,7 @@ import {
   Database,
   Radio,
   User,
-  Layers,
-  AlertTriangle
+  Layers
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import BillPayment from './pages/BillPayment';
@@ -23,8 +22,8 @@ import Transactions from './pages/Transactions';
 import TelemetryDashboard from './pages/TelemetryDashboard';
 import PlatformDemo from './pages/PlatformDemo';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
 import Unauthorized from './pages/Unauthorized';
+import AdminProvisioning from './pages/AdminProvisioning';
 import { ToastManager } from './components/ToastManager';
 import { useAuthStore } from './state/authStore';
 import { useToastStore } from './state/toastStore';
@@ -67,7 +66,6 @@ export const App: React.FC = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <ToastManager />
@@ -83,11 +81,9 @@ export const App: React.FC = () => {
     switch (userRole) {
       case 'ADMIN':
         return 'text-cyan-400 bg-cyan-950/40 border border-cyan-800/40';
-      case 'OPERATOR':
+      case 'OPERATIONS':
         return 'text-amber-400 bg-amber-950/40 border border-amber-800/40';
-      case 'SECURITY_ANALYST':
-        return 'text-rose-400 bg-rose-950/40 border border-rose-800/40';
-      case 'CUSTOMER_SUPPORT':
+      case 'AUDITOR':
         return 'text-purple-400 bg-purple-950/40 border border-purple-800/40';
       default:
         return 'text-emerald-400 bg-emerald-950/40 border border-emerald-800/40';
@@ -100,31 +96,37 @@ export const App: React.FC = () => {
       path: '/', 
       label: 'Dashboard', 
       icon: <LayoutDashboard size={18} />, 
-      roles: ['ADMIN', 'OPERATOR', 'SECURITY_ANALYST', 'CUSTOMER_SUPPORT', 'CLIENT'] 
+      roles: ['ADMIN', 'OPERATIONS', 'CLIENT', 'AUDITOR'] 
+    },
+    { 
+      path: '/admin', 
+      label: 'Admin Panel', 
+      icon: <User size={18} />, 
+      roles: ['ADMIN'] 
     },
     { 
       path: '/demo', 
       label: 'Security Operations', 
       icon: <ShieldCheck size={18} />, 
-      roles: ['ADMIN', 'SECURITY_ANALYST'] 
+      roles: ['ADMIN'] 
     },
     { 
       path: '/payment', 
       label: 'Bill Payment', 
       icon: <CreditCard size={18} />, 
-      roles: ['ADMIN', 'CLIENT', 'OPERATOR'] 
+      roles: ['ADMIN', 'CLIENT', 'OPERATIONS'] 
     },
     { 
       path: '/oneview', 
       label: 'OneView Logs', 
       icon: <History size={18} />, 
-      roles: ['ADMIN', 'CUSTOMER_SUPPORT', 'CLIENT', 'OPERATOR'] 
+      roles: ['ADMIN', 'CLIENT', 'OPERATIONS', 'AUDITOR'] 
     },
     { 
       path: '/transactions', 
       label: 'Audit Ledger', 
       icon: <ScrollText size={18} />, 
-      roles: ['ADMIN', 'OPERATOR'] 
+      roles: ['ADMIN', 'OPERATIONS', 'AUDITOR'] 
     },
     { 
       path: '/telemetry', 
@@ -158,7 +160,7 @@ export const App: React.FC = () => {
             {!collapsed && (
               <div className="flex flex-col">
                 <span className="font-extrabold text-sm text-zinc-100 tracking-wider font-display">BBPS NEXTGEN</span>
-                <span className="text-[9px] text-zinc-550 font-mono leading-none tracking-widest mt-0.5">RBAC ISOLATION</span>
+                <span className="text-[9px] text-zinc-555 font-mono leading-none tracking-widest mt-0.5 font-bold text-cyan-500">RBAC ISOLATION</span>
               </div>
             )}
           </div>
@@ -180,16 +182,16 @@ export const App: React.FC = () => {
 
           {/* System Properties Footer */}
           {!collapsed && (
-            <div className="p-4 border-t border-zinc-900/60 bg-zinc-950/40 text-[10px] font-mono text-zinc-650 flex flex-col space-y-1.5 rounded-t-lg mx-2 mb-2">
+            <div className="p-4 border-t border-zinc-900/60 bg-zinc-950/40 text-[10px] font-mono text-zinc-500 flex flex-col space-y-1.5 rounded-t-lg mx-2 mb-2">
               <div className="flex items-center gap-1.5">
-                <Database size={10} className="text-zinc-550" />
+                <Database size={10} className="text-zinc-500" />
                 <span>USER: {username}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Radio size={10} className="text-zinc-550" />
+                <Radio size={10} className="text-zinc-500" />
                 <span>RBAC LEVEL: {role}</span>
               </div>
-              <div className="text-[9px] text-zinc-700 mt-1 border-t border-zinc-900/40 pt-1">
+              <div className="text-[9px] text-zinc-600 mt-1 border-t border-zinc-900/40 pt-1">
                 <span>SESSION STATUS: SECURED</span>
               </div>
             </div>
@@ -213,7 +215,7 @@ export const App: React.FC = () => {
             <div className="flex items-center space-x-5 text-xs font-mono">
               <div className="flex items-center space-x-2">
                 <User size={13} className="text-zinc-500" />
-                <span className="text-zinc-550">Active Role:</span>
+                <span className="text-zinc-500">Active Role:</span>
                 <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded ${getRoleColor(role || '')}`}>
                   {role}
                 </span>
@@ -235,20 +237,12 @@ export const App: React.FC = () => {
               {/* Common dashboard entry */}
               <Route path="/" element={<Dashboard />} />
 
-              {/* Aliased ADMIN routes */}
+              {/* Protected ADMIN routes */}
               <Route 
                 path="/admin" 
                 element={
                   <ProtectedRoute allowedRoles={['ADMIN']}>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/gateway-control" 
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN']}>
-                    <Dashboard />
+                    <AdminProvisioning />
                   </ProtectedRoute>
                 } 
               />
@@ -269,11 +263,11 @@ export const App: React.FC = () => {
                 } 
               />
 
-              {/* Aliased OPERATOR routes */}
+              {/* Protected OPERATIONS/CLIENT routes */}
               <Route 
                 path="/payments" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'CLIENT', 'OPERATOR']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'CLIENT', 'OPERATIONS']}>
                     <BillPayment />
                   </ProtectedRoute>
                 } 
@@ -281,7 +275,7 @@ export const App: React.FC = () => {
               <Route 
                 path="/bill-operations" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'CLIENT', 'OPERATOR']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'CLIENT', 'OPERATIONS']}>
                     <BillPayment />
                   </ProtectedRoute>
                 } 
@@ -289,7 +283,7 @@ export const App: React.FC = () => {
               <Route 
                 path="/payment" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'CLIENT', 'OPERATOR']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'CLIENT', 'OPERATIONS']}>
                     <BillPayment />
                   </ProtectedRoute>
                 } 
@@ -297,7 +291,7 @@ export const App: React.FC = () => {
               <Route 
                 path="/reconciliation" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'OPERATIONS', 'AUDITOR']}>
                     <Transactions />
                   </ProtectedRoute>
                 } 
@@ -305,17 +299,17 @@ export const App: React.FC = () => {
               <Route 
                 path="/transactions" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'OPERATIONS', 'AUDITOR']}>
                     <Transactions />
                   </ProtectedRoute>
                 } 
               />
 
-              {/* Aliased SECURITY_ANALYST routes */}
+              {/* Protected Security routes */}
               <Route 
                 path="/security" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'SECURITY_ANALYST']}>
+                  <ProtectedRoute allowedRoles={['ADMIN']}>
                     <PlatformDemo />
                   </ProtectedRoute>
                 } 
@@ -323,7 +317,7 @@ export const App: React.FC = () => {
               <Route 
                 path="/threat-center" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'SECURITY_ANALYST']}>
+                  <ProtectedRoute allowedRoles={['ADMIN']}>
                     <PlatformDemo />
                   </ProtectedRoute>
                 } 
@@ -331,7 +325,7 @@ export const App: React.FC = () => {
               <Route 
                 path="/replay-monitor" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'SECURITY_ANALYST']}>
+                  <ProtectedRoute allowedRoles={['ADMIN']}>
                     <PlatformDemo />
                   </ProtectedRoute>
                 } 
@@ -339,7 +333,7 @@ export const App: React.FC = () => {
               <Route 
                 path="/audit-logs" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'SECURITY_ANALYST']}>
+                  <ProtectedRoute allowedRoles={['ADMIN']}>
                     <PlatformDemo />
                   </ProtectedRoute>
                 } 
@@ -347,17 +341,17 @@ export const App: React.FC = () => {
               <Route 
                 path="/demo" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'SECURITY_ANALYST']}>
+                  <ProtectedRoute allowedRoles={['ADMIN']}>
                     <PlatformDemo />
                   </ProtectedRoute>
                 } 
               />
 
-              {/* Aliased CUSTOMER_SUPPORT routes */}
+              {/* Protected OneView routes */}
               <Route 
                 path="/oneview" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'CUSTOMER_SUPPORT', 'CLIENT', 'OPERATOR']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'CLIENT', 'OPERATIONS', 'AUDITOR']}>
                     <OneView />
                   </ProtectedRoute>
                 } 
@@ -365,7 +359,7 @@ export const App: React.FC = () => {
               <Route 
                 path="/customer-lookup" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'CUSTOMER_SUPPORT', 'CLIENT', 'OPERATOR']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'CLIENT', 'OPERATIONS', 'AUDITOR']}>
                     <OneView />
                   </ProtectedRoute>
                 } 
@@ -373,7 +367,7 @@ export const App: React.FC = () => {
               <Route 
                 path="/bill-status" 
                 element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'CUSTOMER_SUPPORT', 'CLIENT', 'OPERATOR']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'CLIENT', 'OPERATIONS', 'AUDITOR']}>
                     <OneView />
                   </ProtectedRoute>
                 } 

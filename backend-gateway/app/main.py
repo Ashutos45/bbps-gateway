@@ -47,6 +47,8 @@ async def initialize_database():
         logger.info("Creating database tables if they don't exist...")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;"))
+            await conn.execute(text("UPDATE users SET role = 'OPERATIONS' WHERE role = 'OPERATOR';"))
         logger.info("Database tables initialized successfully.")
         
         # Check if billers already exist
@@ -177,7 +179,7 @@ async def initialize_database():
                 
                 default_users = [
                     {"username": "admin", "password": "admin123", "role": Role.ADMIN, "email": "admin@bbps.com"},
-                    {"username": "operator", "password": "operator123", "role": Role.OPERATOR, "email": "operator@bbps.com"},
+                    {"username": "operations", "password": "operations123", "role": Role.OPERATIONS, "email": "operations@bbps.com"},
                     {"username": "client", "password": "client123", "role": Role.CLIENT, "email": "client@bbps.com"},
                     {"username": "auditor", "password": "auditor123", "role": Role.AUDITOR, "email": "auditor@bbps.com"}
                 ]
@@ -338,8 +340,8 @@ app.include_router(prepaid_plans_router, prefix="/BOBCOU/BBPS", dependencies=[De
 app.include_router(stream_router)
 app.include_router(biller_master_router, prefix="/BOBCOU/BBPS")
 app.include_router(oneview_router, prefix="/BOBCOU/BBPS", dependencies=[Depends(require_roles([Role.CLIENT]))])
-app.include_router(reconciliation_router, prefix="/BOBCOU/BBPS", dependencies=[Depends(require_roles([Role.OPERATOR]))])
-app.include_router(telemetry_router, dependencies=[Depends(require_roles([Role.ADMIN, Role.AUDITOR]))])
+app.include_router(reconciliation_router, prefix="/BOBCOU/BBPS", dependencies=[Depends(require_roles([Role.OPERATIONS]))])
+app.include_router(telemetry_router, dependencies=[Depends(require_roles([Role.ADMIN]))])
 app.include_router(auth_router)
 app.include_router(download_router)
 app.include_router(demo_router)

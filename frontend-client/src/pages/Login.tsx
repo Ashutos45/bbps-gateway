@@ -149,14 +149,8 @@ export const Login: React.FC = () => {
         </form>
 
         <div className="mt-8 pt-6 border-t border-zinc-900 text-center font-mono">
-          <p className="text-xs text-zinc-500">
-            Unauthorized node?{' '}
-            <Link
-              to="/signup"
-              className="text-cyan-400 hover:text-cyan-300 transition-colors underline underline-offset-4 decoration-cyan-950 hover:decoration-cyan-500"
-            >
-              Provision Account
-            </Link>
+          <p className="text-[10px] text-zinc-650">
+            Self-registration is disabled. Contact your System Administrator to provision gateway accounts.
           </p>
         </div>
       </div>

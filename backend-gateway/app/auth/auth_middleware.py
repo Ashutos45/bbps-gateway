@@ -45,6 +45,12 @@ async def get_current_user(
   if api_key:
     role = validate_api_key(api_key)
     if role:
+      if role == "OPERATOR":
+        role = "OPERATIONS"
+      elif role == "SECURITY_ANALYST":
+        role = "AUDITOR"
+      elif role == "CUSTOMER_SUPPORT":
+        role = "OPERATIONS"
       return {"username": f"apikey_client_{role.lower()}", "role": role, "auth_method": "API_KEY"}
     else:
       logger.warning("Invalid API key provided.")
@@ -71,6 +77,12 @@ async def get_current_user(
           status_code=status.HTTP_401_UNAUTHORIZED,
           detail="Unauthorized: Invalid Token Claims"
         )
+      if role == "OPERATOR":
+        role = "OPERATIONS"
+      elif role == "SECURITY_ANALYST":
+        role = "AUDITOR"
+      elif role == "CUSTOMER_SUPPORT":
+        role = "OPERATIONS"
       return {"username": username, "role": role, "auth_method": "JWT"}
     except jwt.ExpiredSignatureError:
       logger.warning("Expired JWT signature detected.")
@@ -93,7 +105,7 @@ async def get_current_user(
     from app.core.middleware import ROUTE_REGEX
     match = ROUTE_REGEX.match(path)
     source_id = match.group("sourceid") if match else "channel"
-    return {"username": f"channel_{source_id.lower()}", "role": Role.OPERATOR, "auth_method": "HMAC"}
+    return {"username": f"channel_{source_id.lower()}", "role": Role.OPERATIONS, "auth_method": "HMAC"}
 
   # 4. Missing Credentials
   import sys

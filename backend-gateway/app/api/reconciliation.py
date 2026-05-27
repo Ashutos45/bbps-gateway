@@ -19,7 +19,7 @@ async def reconcile_transaction(
     request_data: ReconciliationRequest,
     db: AsyncSession = Depends(get_db),
     hmac_headers: dict = Depends(get_hmac_headers),
-    user: dict = Depends(require_roles([Role.ADMIN, Role.OPERATOR]))
+    user: dict = Depends(require_roles([Role.ADMIN, Role.OPERATIONS]))
 ):
     """
     Manually reconciles an ambiguous transaction, transitioning it to a terminal state.

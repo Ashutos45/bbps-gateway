@@ -20,7 +20,7 @@ router_root = APIRouter(tags=["Platform Security & Resilience Demo Layer Root"])
 @router_root.get("/security/status")
 async def get_security_status(
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_roles([Role.ADMIN, Role.SECURITY_ANALYST, Role.AUDITOR]))
+    user: dict = Depends(require_roles([Role.ADMIN, Role.AUDITOR]))
 ):
     """
     Exposes HMAC security configurations and cryptographic state.
@@ -47,7 +47,7 @@ async def get_security_status(
 @router_root.get("/security/replay-metrics")
 async def get_replay_metrics(
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_roles([Role.ADMIN, Role.SECURITY_ANALYST, Role.AUDITOR]))
+    user: dict = Depends(require_roles([Role.ADMIN, Role.AUDITOR]))
 ):
     """
     Exposes replay attack counters, rejected duplicate nonces, and database registry load.
@@ -120,7 +120,7 @@ async def get_chaos_status(
 @router_root.get("/idempotency/stats")
 async def get_idempotency_stats(
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_roles([Role.ADMIN, Role.OPERATOR, Role.SECURITY_ANALYST, Role.AUDITOR]))
+    user: dict = Depends(require_roles([Role.ADMIN, Role.OPERATIONS, Role.AUDITOR]))
 ):
     """
     Exposes duplicate payment rejections, active idempotency locks, and settlement locks.
@@ -142,7 +142,7 @@ async def get_idempotency_stats(
 @router.get("/system/test-summary")
 @router_root.get("/system/test-summary")
 async def get_test_summary(
-    user: dict = Depends(require_roles([Role.ADMIN, Role.SECURITY_ANALYST, Role.AUDITOR]))
+    user: dict = Depends(require_roles([Role.ADMIN, Role.AUDITOR]))
 ):
     """
     Returns automated test runner validation summaries, success metrics, and health indicators.

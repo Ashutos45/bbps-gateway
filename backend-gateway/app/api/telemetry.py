@@ -17,7 +17,7 @@ router = APIRouter()
 )
 async def get_telemetry(
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_roles([Role.ADMIN, Role.SECURITY_ANALYST, Role.AUDITOR]))
+    user: dict = Depends(require_roles([Role.ADMIN]))
 ):
     """
     Exposes system telemetry metrics and transactional health aggregates in JSON format.
@@ -33,7 +33,7 @@ async def get_telemetry(
 )
 async def get_prometheus_metrics(
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_roles([Role.ADMIN, Role.SECURITY_ANALYST, Role.AUDITOR]))
+    user: dict = Depends(require_roles([Role.ADMIN]))
 ):
     """
     Exposes system telemetry formatted in Prometheus text exposition format.

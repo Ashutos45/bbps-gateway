@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type UserRole = 'ADMIN' | 'OPERATOR' | 'CLIENT' | 'AUDITOR' | 'SECURITY_ANALYST' | 'CUSTOMER_SUPPORT';
+export type UserRole = 'ADMIN' | 'OPERATIONS' | 'CLIENT' | 'AUDITOR';
 
 interface AuthState {
   role: UserRole;
@@ -15,11 +15,9 @@ interface AuthState {
 
 const roleKeys: Record<UserRole, string> = {
   ADMIN: 'admin_key_123',
-  OPERATOR: 'operator_key_123',
+  OPERATIONS: 'operator_key_123',
   CLIENT: 'client_key_123',
   AUDITOR: 'auditor_key_123',
-  SECURITY_ANALYST: 'security_analyst_key_123',
-  CUSTOMER_SUPPORT: 'customer_support_key_123',
 };
 
 // Reusable JWT decoder
@@ -41,6 +39,21 @@ export function decodeJwt(token: string): any {
   }
 }
 
+// Map legacy roles for backward compatibility
+function normalizeRole(role: string): UserRole {
+  const upper = (role || '').toUpperCase();
+  if (upper === 'OPERATOR' || upper === 'CUSTOMER_SUPPORT') {
+    return 'OPERATIONS';
+  }
+  if (upper === 'SECURITY_ANALYST') {
+    return 'AUDITOR';
+  }
+  if (upper === 'ADMIN' || upper === 'CLIENT' || upper === 'AUDITOR' || upper === 'OPERATIONS') {
+    return upper as UserRole;
+  }
+  return 'CLIENT';
+}
+
 const getInitialAuthState = () => {
   const token = localStorage.getItem('jwt_token') || null;
   let role: UserRole = 'CLIENT';
@@ -50,7 +63,7 @@ const getInitialAuthState = () => {
   if (token) {
     const claims = decodeJwt(token);
     if (claims && claims.role) {
-      role = claims.role as UserRole;
+      role = normalizeRole(claims.role);
       username = claims.sub || null;
       apiKey = roleKeys[role] || 'client_key_123';
     } else {
@@ -73,7 +86,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   jwtToken: initialState.jwtToken,
   username: initialState.username,
 
-
   setRole: (role: UserRole) => {
     const key = roleKeys[role];
     localStorage.setItem('user_role', role);
@@ -87,7 +99,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Auto-extract role from token on token update
       const claims = decodeJwt(token);
       if (claims && claims.role) {
-        const tokenRole = claims.role as UserRole;
+        const tokenRole = normalizeRole(claims.role);
         localStorage.setItem('user_role', tokenRole);
         const key = roleKeys[tokenRole] || 'client_key_123';
         localStorage.setItem('api_key', key);

@@ -152,7 +152,7 @@ export const OneView: React.FC = () => {
                         </td>
                         <td className="px-4.5 py-3.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           {isAmbiguous ? (
-                            role === 'ADMIN' || role === 'OPERATOR' ? (
+                            role === 'ADMIN' || role === 'OPERATIONS' ? (
                               <button
                                 onClick={() => handleReconcile(tx.trace_id)}
                                 disabled={isReconciling}

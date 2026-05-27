@@ -19,7 +19,7 @@ async def get_customer_oneview(
     customerid: str,
     db: AsyncSession = Depends(get_db),
     hmac_headers: dict = Depends(get_hmac_headers),
-    user: dict = Depends(require_roles([Role.ADMIN, Role.CUSTOMER_SUPPORT, Role.CLIENT, Role.OPERATOR]))
+    user: dict = Depends(require_roles([Role.ADMIN, Role.CLIENT, Role.OPERATIONS, Role.AUDITOR]))
 ):
     """
     Retrieves a consolidated view of all transaction states and history for a customer.

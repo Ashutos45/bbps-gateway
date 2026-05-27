@@ -53,7 +53,7 @@ async def get_file_archive(
   sourceid: str,
   fileid: str,
   request: Request,
-  user: dict = Depends(require_roles([Role.ADMIN, Role.OPERATOR]))
+  user: dict = Depends(require_roles([Role.ADMIN, Role.OPERATIONS]))
 ):
   """
   Retrieves compilation status of the zipped master file.

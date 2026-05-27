@@ -10,9 +10,11 @@ import {
   DollarSign
 } from 'lucide-react';
 import { useReconciliationStore } from '../state/reconciliationStore';
+import { useAuthStore } from '../state/authStore';
 
 export const Transactions: React.FC = () => {
   const { transactions, loading, loadOneView } = useReconciliationStore();
+  const { role } = useAuthStore();
   const [customerId] = useState('cust123');
   
   const [searchTrace, setSearchTrace] = useState('');
@@ -58,8 +60,13 @@ export const Transactions: React.FC = () => {
           <h1 className="text-2xl font-extrabold font-display text-zinc-100 tracking-tight flex items-center gap-2">
             <ScrollText className="text-cyan-400 w-6 h-6 stroke-[2]" />
             Transactions Audit Ledger
+            {role === 'AUDITOR' && (
+              <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase font-mono tracking-widest bg-purple-950/40 text-purple-400 border border-purple-800/40 rounded">
+                Read-Only Audit
+              </span>
+            )}
           </h1>
-          <p className="text-xs text-zinc-500 mt-1">
+          <p className="text-xs text-zinc-550 mt-1">
             FILTER, SEARCH, AND AUDIT FULL HISTORIES OF Nodal PAYMENTS UNDER SYSTEM CUSTOMER ID: <span className="font-mono text-cyan-400 bg-cyan-950/20 px-1.5 py-0.2 rounded border border-cyan-900/30">{customerId}</span>
           </p>
         </div>

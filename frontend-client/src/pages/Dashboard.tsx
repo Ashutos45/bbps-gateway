@@ -16,11 +16,8 @@ import {
   TrendingUp,
   AlertCircle,
   CreditCard,
-  Search,
   Lock,
-  Clock,
-  ArrowUpRight,
-  UserCheck
+  Clock
 } from 'lucide-react';
 import { useCacheStore } from '../state/cacheStore';
 import { useReconciliationStore } from '../state/reconciliationStore';
@@ -47,11 +44,6 @@ export const Dashboard: React.FC = () => {
   const [compileFileId, setCompileFileId] = useState<string | null>(null);
   const [compileDownloadUrl, setCompileDownloadUrl] = useState<string | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
-
-  // Customer Support search state
-  const [searchCustomerId, setSearchCustomerId] = useState('cust123');
-  const [supportTransactions, setSupportTransactions] = useState<any[]>([]);
-  const [searchingSupport, setSearchingSupport] = useState(false);
 
   // Poll intervals
   useEffect(() => {
@@ -106,30 +98,7 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleSupportLookup = async (id: string) => {
-    if (!id.trim()) {
-      useToastStore.getState().addToast('error', 'Please enter a valid customer ID.');
-      return;
-    }
-    setSearchingSupport(true);
-    try {
-      const sourceId = import.meta.env.VITE_SOURCE_ID || 'mbanking';
-      const response = await apiClient.get(`/BOBCOU/BBPS/${sourceId}/customers/${id}/billpay/oneview`);
-      setSupportTransactions(response.data.payments || []);
-      useToastStore.getState().addToast('success', `Retrieved ${response.data.payments?.length || 0} transactions for customer ${id}.`);
-    } catch (err: any) {
-      setSupportTransactions([]);
-      useToastStore.getState().addToast('error', `Lookup failed: ${err.response?.data?.message || err.message}`);
-    } finally {
-      setSearchingSupport(false);
-    }
-  };
 
-  useEffect(() => {
-    if (role === 'CUSTOMER_SUPPORT') {
-      handleSupportLookup(searchCustomerId);
-    }
-  }, [role]);
 
   const handleTriggerExport = async () => {
     setCompiling(true);
@@ -226,9 +195,8 @@ export const Dashboard: React.FC = () => {
           <h1 className="text-2xl font-extrabold font-display text-zinc-100 tracking-tight flex items-center gap-2">
             <Activity className="text-cyan-400 stroke-[2] w-6 h-6" />
             {role === 'ADMIN' && 'Ecosystem Central Command'}
-            {role === 'OPERATOR' && 'Transaction Operations Desk'}
-            {role === 'SECURITY_ANALYST' && 'Security Operations Center (SOC) Console'}
-            {role === 'CUSTOMER_SUPPORT' && 'Customer Support Operations Hub'}
+            {role === 'OPERATIONS' && 'Transaction Operations Desk'}
+            {role === 'AUDITOR' && 'Compliance & Security Audit Desk'}
             {role === 'CLIENT' && 'Consumer Bill Desk'}
           </h1>
           <p className="text-xs text-zinc-500 mt-1">
@@ -256,7 +224,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {(['CLIENT', 'OPERATOR', 'ADMIN', 'SECURITY_ANALYST', 'CUSTOMER_SUPPORT'] as const).map((r) => {
+          {(['CLIENT', 'OPERATIONS', 'ADMIN', 'AUDITOR'] as const).map((r) => {
             const isActive = role === r;
             return (
               <button
@@ -268,7 +236,7 @@ export const Dashboard: React.FC = () => {
                     : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:bg-zinc-850 hover:text-zinc-200'
                 }`}
               >
-                {r === 'SECURITY_ANALYST' ? 'SECURITY' : r === 'CUSTOMER_SUPPORT' ? 'SUPPORT' : r}
+                {r}
               </button>
             );
           })}
@@ -600,8 +568,8 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ==================== OPERATOR ROLE DASHBOARD ==================== */}
-      {role === 'OPERATOR' && (
+      {/* ==================== OPERATIONS ROLE DASHBOARD ==================== */}
+      {role === 'OPERATIONS' && (
         <div className="space-y-6 animate-fade-in">
           {/* Operator metrics grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 font-mono text-xs">
@@ -743,20 +711,20 @@ export const Dashboard: React.FC = () => {
               </div>
 
               <div className="border border-zinc-900 border-dashed p-3 rounded-lg text-[9px] text-zinc-500 font-mono text-center">
-                OPERATOR CLEARANCE SECURED
+                OPERATIONS CLEARANCE SECURED
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ==================== SECURITY_ANALYST ROLE DASHBOARD ==================== */}
-      {role === 'SECURITY_ANALYST' && (
+      {/* ==================== AUDITOR ROLE DASHBOARD ==================== */}
+      {role === 'AUDITOR' && (
         <div className="space-y-6 animate-fade-in">
-          {/* Security Analyst metrics grid */}
+          {/* Compliance & Security Audit metrics grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 font-mono text-xs">
             <div className="glass-card rounded-xl p-5 flex flex-col justify-between h-28 glass-card-rose shadow-[0_0_15px_rgba(239,68,68,0.05)]">
-              <div className="flex justify-between items-start text-zinc-550">
+              <div className="flex justify-between items-start text-zinc-555">
                 <span className="text-[10px] font-bold">HMAC VERIFICATION FAILS</span>
                 <ShieldAlert size={14} className="text-rose-500" />
               </div>
@@ -767,8 +735,8 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <div className="glass-card rounded-xl p-5 flex flex-col justify-between h-28 glass-card-rose shadow-[0_0_15px_rgba(239,68,68,0.05)]">
-              <div className="flex justify-between items-start text-zinc-550">
-                <span className="text-[10px] font-bold">REPLAY BLOCKED ATTACK</span>
+              <div className="flex justify-between items-start text-zinc-555">
+                <span className="text-[10px] font-bold">REPLAY ATTACK BLOCKS</span>
                 <Lock size={14} className="text-rose-500" />
               </div>
               <div>
@@ -778,24 +746,24 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <div className="glass-card rounded-xl p-5 flex flex-col justify-between h-28 glass-card-amber">
-              <div className="flex justify-between items-start text-zinc-550">
+              <div className="flex justify-between items-start text-zinc-555">
                 <span className="text-[10px] font-bold">STALE ACCESS TOKENS</span>
                 <Clock size={14} className="text-amber-500" />
               </div>
               <div>
                 <span className="block font-black text-2xl text-amber-500 tracking-tight">{expiredTokens}</span>
-                <span className="text-[9px] text-zinc-500 block mt-0.5 font-sans">Expired token access attempts</span>
+                <span className="text-[9px] text-zinc-500 block mt-0.5 font-sans font-normal">Expired token access attempts</span>
               </div>
             </div>
 
             <div className="glass-card rounded-xl p-5 flex flex-col justify-between h-28 glass-card-emerald">
-              <div className="flex justify-between items-start text-zinc-550">
+              <div className="flex justify-between items-start text-zinc-555">
                 <span className="text-[10px] font-bold">AUDITED DOWNLOADS</span>
                 <CheckCircle size={14} className="text-emerald-500" />
               </div>
               <div>
-                <span className="block font-black text-2xl text-emerald-500 tracking-tight">{downloadAudits}</span>
-                <span className="text-[9px] text-zinc-500 block mt-0.5 font-sans">Master registry zips downloaded</span>
+                <span className="block font-black text-2xl text-emerald-400 tracking-tight">{downloadAudits}</span>
+                <span className="text-[9px] text-zinc-500 block mt-0.5 font-sans">Master zip downloads</span>
               </div>
             </div>
           </div>
@@ -805,8 +773,8 @@ export const Dashboard: React.FC = () => {
             <div className="glass-card rounded-xl p-6 space-y-4 lg:col-span-8">
               <div className="flex justify-between items-center border-b border-zinc-900 pb-2.5">
                 <h3 className="text-sm font-display font-bold text-zinc-200 flex items-center gap-1.5">
-                  <Terminal size={14} className="text-rose-500" />
-                  <span>Cryptographic Verification & Signature Trails</span>
+                  <Terminal size={14} className="text-cyan-400" />
+                  <span>Cryptographic Verification & Signature Trails (Read-Only)</span>
                 </h3>
                 <span className="text-[9px] text-zinc-500 font-mono">Zero-Trust validations</span>
               </div>
@@ -826,7 +794,7 @@ export const Dashboard: React.FC = () => {
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-y-1 gap-x-4 text-[10px] text-zinc-500">
-                        <div><span className="text-zinc-600">NONCE:</span> {tx.reconciliation_log?.polling_attempts ? `NNC_${tx.trace_id.substring(0, 8)}` : 'NNC_REGISTRY_OK'}</div>
+                        <div><span className="text-zinc-600">NONCE:</span> NNC_REGISTRY_OK</div>
                         <div><span className="text-zinc-600">TIMESTAMP:</span> {new Date(tx.created_at).toISOString()}</div>
                         <div className="col-span-2 truncate"><span className="text-zinc-600">X-SIGNATURE:</span> sha256_hash_{tx.trace_id.replace(/-/g, '').substring(0, 24)}...</div>
                       </div>
@@ -840,187 +808,33 @@ export const Dashboard: React.FC = () => {
             <div className="glass-card rounded-xl p-6 space-y-4 lg:col-span-4 flex flex-col justify-between">
               <div className="space-y-4">
                 <h3 className="text-sm font-display font-bold text-zinc-200 border-b border-zinc-900 pb-2.5">
-                  Security Configurations
+                  Audit Configuration
                 </h3>
                 
                 <div className="space-y-2 text-xs font-mono">
                   <div className="p-3 bg-zinc-900/20 border border-zinc-900 rounded-xl space-y-2">
                     <div className="flex justify-between text-[10px]">
-                      <span className="text-zinc-500">ALGORITHM:</span>
-                      <span className="text-zinc-300 font-bold">HMAC-SHA256</span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-zinc-550">SKEW WINDOW:</span>
-                      <span className="text-zinc-300 font-bold">±300s</span>
+                      <span className="text-zinc-500">ROLE CLEARANCE:</span>
+                      <span className="text-purple-400 font-bold">AUDITOR</span>
                     </div>
                     <div className="flex justify-between text-[10px]">
                       <span className="text-zinc-550">HMAC CHECK:</span>
                       <span className="text-emerald-400 font-bold">STRICT</span>
                     </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-zinc-555">LOG RETENTION:</span>
+                      <span className="text-zinc-300 font-bold">90 Days</span>
+                    </div>
                   </div>
 
-                  <p className="text-[11px] text-zinc-550 font-sans leading-relaxed pt-2">
-                    You are in Security Analyst mode. You have read-only audits on all cryptographic validations and anti-replay nonce registers.
+                  <p className="text-[11px] text-zinc-500 font-sans leading-relaxed pt-2">
+                    You have read-only access to compliance reports, transaction trails, and cryptographic logs. System configuration modifications and action triggers are restricted.
                   </p>
                 </div>
               </div>
 
-              <div className="border border-rose-950/20 bg-rose-950/10 p-3 rounded-lg text-[9px] text-rose-400 font-mono text-center">
-                SECURITY ANALYST ACTIVE AUDIT
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==================== CUSTOMER_SUPPORT ROLE DASHBOARD ==================== */}
-      {role === 'CUSTOMER_SUPPORT' && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Customer support metrics grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 font-mono text-xs">
-            <div className="glass-card rounded-xl p-5 flex flex-col justify-between h-28 glass-card-cyan">
-              <div className="flex justify-between items-start text-zinc-550">
-                <span className="text-[10px] font-bold">ACTIVE CONSUMERS</span>
-                <UserCheck size={14} className="text-cyan-400" />
-              </div>
-              <div>
-                <span className="block font-black text-2xl text-zinc-100 tracking-tight">1,248</span>
-                <span className="text-[9px] text-zinc-500 block mt-0.5 font-sans">BobCOU registered accounts</span>
-              </div>
-            </div>
-
-            <div className="glass-card rounded-xl p-5 flex flex-col justify-between h-28 glass-card-amber">
-              <div className="flex justify-between items-start text-zinc-550">
-                <span className="text-[10px] font-bold">OUTSTANDING BILLS</span>
-                <AlertCircle size={14} className="text-amber-500" />
-              </div>
-              <div>
-                <span className="block font-black text-2xl text-amber-500 tracking-tight">12</span>
-                <span className="text-[9px] text-zinc-500 block mt-0.5 font-sans">Unresolved consumer invoices</span>
-              </div>
-            </div>
-
-            <div className="glass-card rounded-xl p-5 flex flex-col justify-between h-28 glass-card-emerald">
-              <div className="flex justify-between items-start text-zinc-550">
-                <span className="text-[10px] font-bold">RESOLVED TICKETS</span>
-                <CheckCircle size={14} className="text-emerald-400" />
-              </div>
-              <div>
-                <span className="block font-black text-2xl text-emerald-400 tracking-tight">98.4%</span>
-                <span className="text-[9px] text-zinc-500 block mt-0.5 font-sans">Inquiry resolution success rate</span>
-              </div>
-            </div>
-
-            <div className="glass-card rounded-xl p-5 flex flex-col justify-between h-28 glass-card-cyan">
-              <div className="flex justify-between items-start text-zinc-550">
-                <span className="text-[10px] font-bold">COLLECTIONS SWEEP</span>
-                <Activity size={14} className="text-cyan-400" />
-              </div>
-              <div>
-                <span className="block font-black text-2xl text-zinc-100 tracking-tight">₹1,85,420</span>
-                <span className="text-[9px] text-zinc-500 block mt-0.5 font-sans">Today's settled volume</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Customer lookup search and results */}
-            <div className="glass-card rounded-xl p-6 space-y-4 lg:col-span-8 flex flex-col">
-              <div className="border-b border-zinc-900 pb-3">
-                <h3 className="text-sm font-display font-bold text-zinc-200 flex items-center gap-2">
-                  <Search size={15} className="text-cyan-400" />
-                  <span>Consolidated Customer Lookup</span>
-                </h3>
-                <p className="text-[10.5px] text-zinc-500 mt-1">Search consumer references to load OneView transaction states and auto-resolved histories.</p>
-              </div>
-
-              {/* Search bar */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={searchCustomerId}
-                  onChange={(e) => setSearchCustomerId(e.target.value)}
-                  placeholder="Enter Customer ID (e.g. cust123)"
-                  className="flex-1 bg-zinc-900/60 border border-zinc-800 text-zinc-200 rounded-xl px-4 py-2 text-xs font-mono focus:outline-none focus:border-cyan-500 transition-all"
-                />
-                <button
-                  onClick={() => handleSupportLookup(searchCustomerId)}
-                  disabled={searchingSupport}
-                  className="bg-cyan-600 hover:bg-cyan-500 text-black font-semibold text-xs py-2 px-5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  {searchingSupport ? <RotateCw className="animate-spin" size={12} /> : <Search size={12} />}
-                  <span>SEARCH</span>
-                </button>
-              </div>
-
-              {/* Results */}
-              <div className="flex-1 pt-4">
-                {searchingSupport ? (
-                  <div className="text-zinc-650 text-xs font-mono py-12 text-center flex items-center justify-center gap-2">
-                    <RotateCw className="animate-spin text-zinc-600" size={14} />
-                    Scanning consumer database...
-                  </div>
-                ) : supportTransactions.length === 0 ? (
-                  <div className="text-zinc-550 text-xs font-mono py-12 text-center border border-zinc-900 border-dashed rounded-xl bg-zinc-900/10">
-                    No transactions found. Try searching for customer ID &quot;cust123&quot;.
-                  </div>
-                ) : (
-                  <div className="space-y-3 font-mono text-xs">
-                    <div className="text-[10px] text-zinc-400 font-bold border-b border-zinc-900 pb-1 flex justify-between">
-                      <span>CUSTOMER TRANSACTION HISTORY</span>
-                      <span>{supportTransactions.length} ENTRIES FOUND</span>
-                    </div>
-                    {supportTransactions.map((tx: any) => {
-                      const isSettled = tx.transaction_state === 'SETTLED';
-                      const isAmbiguous = tx.transaction_state === 'AMBIGUOUS_TIMEOUT';
-                      const isFailed = tx.transaction_state.startsWith('FAILED');
-
-                      return (
-                        <div key={tx.trace_id} className="bg-zinc-900/10 border border-zinc-900/80 rounded-xl p-3.5 flex justify-between items-center">
-                          <div>
-                            <div className="font-bold text-zinc-200">{tx.biller_id}</div>
-                            <div className="text-[10px] text-zinc-500 mt-1">₹{tx.amount} | Trace: {tx.trace_id}</div>
-                          </div>
-                          <span className={`badge-premium ${
-                            isSettled ? 'badge-premium-emerald' :
-                            isAmbiguous ? 'badge-premium-amber animate-pulse' :
-                            isFailed ? 'badge-premium-rose' : 'badge-premium-zinc'
-                          }`}>
-                            {tx.transaction_state}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick links & support resources */}
-            <div className="glass-card rounded-xl p-6 space-y-4 lg:col-span-4 flex flex-col justify-between">
-              <div className="space-y-4">
-                <h3 className="text-sm font-display font-bold text-zinc-200 border-b border-zinc-900 pb-2.5">
-                  Support Resources
-                </h3>
-
-                <div className="space-y-2">
-                  <Link
-                    to="/oneview"
-                    className="flex justify-between items-center bg-zinc-900/60 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 p-3 rounded-xl transition-all group cursor-pointer"
-                  >
-                    <span className="text-[11px] font-semibold">OneView Diagnostics</span>
-                    <ArrowUpRight size={13} className="text-zinc-500 group-hover:text-cyan-400 transition-colors" />
-                  </Link>
-
-                  <div className="bg-[#050507] border border-zinc-900 rounded-xl p-4 text-[10.5px] font-sans text-zinc-500 leading-relaxed">
-                    <strong className="text-zinc-400 block mb-1">CUSTOMER SUPPORT SCOPE:</strong>
-                    You possess view permissions across customer profiles and transaction histories. You can trigger on-the-fly reconciliation checks via OneView. For mutations, contact operations desk.
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-zinc-900 border-dashed p-3 rounded-lg text-[9px] text-zinc-550 font-mono text-center bg-zinc-900/5">
-                SUPPORT PORTAL ACTIVE SESSION
+              <div className="border border-purple-950/30 bg-purple-950/10 p-3 rounded-lg text-[9.5px] text-purple-400 font-mono text-center font-bold">
+                AUDITOR COMPLIANCE ACTIVE
               </div>
             </div>
           </div>
