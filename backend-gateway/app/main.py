@@ -30,7 +30,7 @@ from app.workers.retry_worker import RetryWorker
 from app.workers.file_generation_worker import FileGenerationWorker
 from sqlalchemy import text, select, func
 from loguru import logger
-from app.database.models import Biller, User
+from app.database.models import Biller, User, AdminAccessKey
 from app.auth.auth_middleware import require_roles
 from app.auth.role_manager import Role
 import uuid
@@ -47,8 +47,13 @@ async def initialize_database():
         logger.info("Creating database tables if they don't exist...")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;"))
-            await conn.execute(text("UPDATE users SET role = 'OPERATIONS' WHERE role = 'OPERATOR';"))
+            try:
+                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;"))
+                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS organization VARCHAR(100);"))
+                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS company VARCHAR(100);"))
+                await conn.execute(text("UPDATE users SET role = 'OPERATIONS' WHERE role = 'OPERATOR';"))
+            except Exception as e:
+                logger.warning(f"Note on migration execution: {e}")
         logger.info("Database tables initialized successfully.")
         
         # Check if billers already exist
@@ -178,19 +183,31 @@ async def initialize_database():
                 from app.utils.security import get_password_hash
                 
                 default_users = [
-                    {"username": "admin", "password": "admin123", "role": Role.ADMIN, "email": "admin@bbps.com"},
-                    {"username": "operations", "password": "operations123", "role": Role.OPERATIONS, "email": "operations@bbps.com"},
+                    {"username": "admin", "password": "admin123", "role": Role.SUPER_ADMIN, "email": "admin@bbps.com", "key": "SUPER_KEY_123"},
+                    {"username": "regular_admin", "password": "admin123", "role": Role.ADMIN, "email": "regular_admin@bbps.com", "key": "ADMIN_KEY_123"},
+                    {"username": "operations", "password": "operations123", "role": Role.OPERATIONS, "email": "operations@bbps.com", "key": "OPERATIONS_KEY_123"},
                     {"username": "client", "password": "client123", "role": Role.CLIENT, "email": "client@bbps.com"},
-                    {"username": "auditor", "password": "auditor123", "role": Role.AUDITOR, "email": "auditor@bbps.com"}
+                    {"username": "auditor", "password": "auditor123", "role": Role.AUDITOR, "email": "auditor@bbps.com", "key": "AUDITOR_KEY_123"}
                 ]
                 for user_data in default_users:
+                    u_id = uuid.uuid4()
                     new_user = User(
+                        id=u_id,
                         username=user_data["username"],
                         email=user_data["email"],
                         hashed_password=get_password_hash(user_data["password"]),
                         role=user_data["role"]
                     )
                     session.add(new_user)
+                    
+                    if "key" in user_data:
+                        access_key = AdminAccessKey(
+                            user_id=u_id,
+                            key_hash=get_password_hash(user_data["key"]),
+                            is_active=True
+                        )
+                        session.add(access_key)
+                        
                 await session.commit()
                 logger.info(f"Successfully seeded {len(default_users)} default users.")
             else:

@@ -131,8 +131,8 @@ class require_role:
   def __call__(self, user: dict = Depends(get_current_user)):
     user_role = user.get("role")
     
-    # 1. Admin bypasses all checks
-    if user_role == Role.ADMIN:
+    # 1. Super Admin bypasses all checks
+    if user_role == Role.SUPER_ADMIN:
       return user
 
     # 2. Verify role fits allowed rules directly or inherited hierarchy

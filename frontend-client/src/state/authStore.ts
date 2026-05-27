@@ -1,19 +1,22 @@
 import { create } from 'zustand';
 
-export type UserRole = 'ADMIN' | 'OPERATIONS' | 'CLIENT' | 'AUDITOR';
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'OPERATIONS' | 'CLIENT' | 'AUDITOR';
 
 interface AuthState {
   role: UserRole;
   apiKey: string;
   jwtToken: string | null;
   username: string | null;
+  adminAccessKey: string | null;
   setRole: (role: UserRole) => void;
   setJwtToken: (token: string | null) => void;
   setUsername: (username: string | null) => void;
+  setAdminAccessKey: (key: string | null) => void;
   logout: () => void;
 }
 
 const roleKeys: Record<UserRole, string> = {
+  SUPER_ADMIN: 'admin_key_123',
   ADMIN: 'admin_key_123',
   OPERATIONS: 'operator_key_123',
   CLIENT: 'client_key_123',
@@ -42,6 +45,9 @@ export function decodeJwt(token: string): any {
 // Map legacy roles for backward compatibility
 function normalizeRole(role: string): UserRole {
   const upper = (role || '').toUpperCase();
+  if (upper === 'SUPER_ADMIN') {
+    return 'SUPER_ADMIN';
+  }
   if (upper === 'OPERATOR' || upper === 'CUSTOMER_SUPPORT') {
     return 'OPERATIONS';
   }
@@ -56,6 +62,7 @@ function normalizeRole(role: string): UserRole {
 
 const getInitialAuthState = () => {
   const token = localStorage.getItem('jwt_token') || null;
+  const adminAccessKey = localStorage.getItem('admin_access_key') || null;
   let role: UserRole = 'CLIENT';
   let username: string | null = null;
   let apiKey = 'client_key_123';
@@ -72,10 +79,11 @@ const getInitialAuthState = () => {
       localStorage.removeItem('user_role');
       localStorage.removeItem('api_key');
       localStorage.removeItem('username');
+      localStorage.removeItem('admin_access_key');
     }
   }
 
-  return { role, apiKey, jwtToken: token, username };
+  return { role, apiKey, jwtToken: token, username, adminAccessKey };
 };
 
 const initialState = getInitialAuthState();
@@ -85,6 +93,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   apiKey: initialState.apiKey,
   jwtToken: initialState.jwtToken,
   username: initialState.username,
+  adminAccessKey: initialState.adminAccessKey,
 
   setRole: (role: UserRole) => {
     const key = roleKeys[role];
@@ -121,11 +130,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ username });
   },
 
+  setAdminAccessKey: (key: string | null) => {
+    if (key) {
+      localStorage.setItem('admin_access_key', key);
+    } else {
+      localStorage.removeItem('admin_access_key');
+    }
+    set({ adminAccessKey: key });
+  },
+
   logout: () => {
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('user_role');
     localStorage.removeItem('api_key');
     localStorage.removeItem('username');
-    set({ jwtToken: null, role: 'CLIENT', apiKey: 'client_key_123', username: null });
+    localStorage.removeItem('admin_access_key');
+    set({ jwtToken: null, role: 'CLIENT', apiKey: 'client_key_123', username: null, adminAccessKey: null });
   },
 }));

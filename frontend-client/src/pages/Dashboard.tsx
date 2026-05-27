@@ -194,6 +194,7 @@ export const Dashboard: React.FC = () => {
         <div>
           <h1 className="text-2xl font-extrabold font-display text-zinc-100 tracking-tight flex items-center gap-2">
             <Activity className="text-cyan-400 stroke-[2] w-6 h-6" />
+            {role === 'SUPER_ADMIN' && 'Ecosystem Central Command (Super)'}
             {role === 'ADMIN' && 'Ecosystem Central Command'}
             {role === 'OPERATIONS' && 'Transaction Operations Desk'}
             {role === 'AUDITOR' && 'Compliance & Security Audit Desk'}
@@ -224,7 +225,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {(['CLIENT', 'OPERATIONS', 'ADMIN', 'AUDITOR'] as const).map((r) => {
+          {(['CLIENT', 'OPERATIONS', 'ADMIN', 'SUPER_ADMIN', 'AUDITOR'] as const).map((r) => {
             const isActive = role === r;
             return (
               <button
@@ -398,7 +399,7 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* ==================== ADMIN ROLE DASHBOARD ==================== */}
-      {role === 'ADMIN' && (
+      {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
         <div className="space-y-6 animate-fade-in">
           {/* Admin metrics grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 font-mono text-xs">

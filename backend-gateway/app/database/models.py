@@ -89,7 +89,30 @@ class User(Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(String(30), nullable=False)  # ADMIN, CLIENT, AUDITOR, OPERATIONS
+    role = Column(String(30), nullable=False)  # SUPER_ADMIN, ADMIN, CLIENT, AUDITOR, OPERATIONS
     is_active = Column(Boolean, default=True, nullable=False)
+    organization = Column(String(100), nullable=True)
+    company = Column(String(100), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class AdminAccessKey(Base):
+    __tablename__ = "admin_access_keys"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), index=True, nullable=False)
+    key_hash = Column(String(255), unique=True, index=True, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    username = Column(String(50), index=True, nullable=False)
+    role = Column(String(30), nullable=False)
+    action = Column(String(100), nullable=False)
+    details = Column(String(500), nullable=True)
+    ip_address = Column(String(50), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

@@ -1,8 +1,9 @@
 class Role:
+  SUPER_ADMIN = "SUPER_ADMIN"
   ADMIN = "ADMIN"
-  CLIENT = "CLIENT"
   OPERATIONS = "OPERATIONS"
   AUDITOR = "AUDITOR"
+  CLIENT = "CLIENT"
   
   # Backward compatibility aliases
   OPERATOR = "OPERATIONS"
@@ -11,8 +12,9 @@ class Role:
 
 # Map of roles to check inheritance or permissions
 ROLE_HIERARCHY = {
-  Role.ADMIN: [Role.ADMIN, Role.OPERATIONS, Role.CLIENT, Role.AUDITOR],
+  Role.SUPER_ADMIN: [Role.SUPER_ADMIN, Role.ADMIN, Role.OPERATIONS, Role.AUDITOR, Role.CLIENT],
+  Role.ADMIN: [Role.ADMIN, Role.OPERATIONS, Role.AUDITOR, Role.CLIENT],
   Role.OPERATIONS: [Role.OPERATIONS, Role.CLIENT],
-  Role.CLIENT: [Role.CLIENT],
-  Role.AUDITOR: [Role.AUDITOR]
+  Role.AUDITOR: [Role.AUDITOR],
+  Role.CLIENT: [Role.CLIENT]
 }
