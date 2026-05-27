@@ -359,6 +359,7 @@ class IPWhitelistingMiddleware(BaseHTTPMiddleware):
     IP whitelist. Rejects unauthorized client systems with a 403 Forbidden response.
     """
     async def dispatch(self, request: Request, call_next) -> Response:
+        import os
         x_forwarded_for = request.headers.get("x-forwarded-for")
         if x_forwarded_for:
             client_ip = x_forwarded_for.split(",")[0].strip()
@@ -368,8 +369,9 @@ class IPWhitelistingMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         path_lower = path.lower()
         
+        # 1. Allow bypass paths (Auth routes, Swagger/docs, health, static, demo/testing)
         is_bypass = False
-        for system_path in ["/docs", "/redoc", "/openapi.json", "/health", "/favicon.ico", "/static", "/"]:
+        for system_path in ["/docs", "/redoc", "/openapi.json", "/health", "/favicon.ico", "/static", "/auth", "/demo", "/"]:
             if system_path == "/":
                 if path == "/":
                     is_bypass = True
@@ -383,59 +385,79 @@ class IPWhitelistingMiddleware(BaseHTTPMiddleware):
 
         from app.core.config import settings
 
-        # 1. Environment-aware whitelist check for production
-        if settings.ENV == "production":
-            # Check internal networking / private IP
-            def is_private_ip(ip: str) -> bool:
-                if ip in ("localhost", "::1", "testclient", "unknown"):
-                    return True
-                # Match loopback, 10.x.x.x, 192.168.x.x
-                if ip.startswith("127.") or ip.startswith("10.") or ip.startswith("192.168."):
-                    return True
-                # Match 172.16.x.x - 172.31.x.x
-                if ip.startswith("172."):
-                    parts = ip.split(".")
-                    if len(parts) >= 2:
-                        try:
-                            second_octet = int(parts[1])
-                            if 16 <= second_octet <= 31:
-                                return True
-                        except ValueError:
-                            pass
-                return False
+        # 2. Allow JWT-authenticated requests or API key
+        authorization = request.headers.get("authorization") or request.headers.get("Authorization") or ""
+        api_key = request.headers.get("x-api-key") or request.headers.get("X-API-Key") or ""
+        
+        has_valid_jwt = False
+        if authorization.startswith("Bearer "):
+            token = authorization.split(" ")[1]
+            try:
+                from app.auth.jwt_handler import decode_access_token
+                payload = decode_access_token(token)
+                if payload.get("sub") and payload.get("role"):
+                    has_valid_jwt = True
+            except Exception:
+                pass
 
-            if is_private_ip(client_ip):
-                return await call_next(request)
-
-            # Check if Origin or Referer matches the configured allowed origins or vercel domains
-            origin = request.headers.get("origin") or ""
-            referer = request.headers.get("referer") or ""
-            
-            allowed_origins = settings.allowed_origins_list
-            is_from_allowed_origin = False
-            for allowed in allowed_origins:
-                if allowed in origin or allowed in referer:
-                    is_from_allowed_origin = True
-                    break
-
-            if ".vercel.app" in origin or ".vercel.app" in referer or "vercel" in origin or "vercel" in referer:
-                is_from_allowed_origin = True
-
-            if is_from_allowed_origin:
-                return await call_next(request)
-
-            # Bypass whitelisting if request has valid JWT token or API key
-            authorization = request.headers.get("authorization") or request.headers.get("Authorization") or ""
-            api_key = request.headers.get("x-api-key") or request.headers.get("X-API-Key") or ""
-            if (authorization and authorization.startswith("Bearer ")) or api_key:
-                # Bypassed - let auth validation verify credentials
-                return await call_next(request)
-
-            # Safe Fallback mode for production cloud routing
-            logger.warning(f"Production IP Whitelist safe-fallback bypass for IP: {client_ip}, path: {path}")
+        if has_valid_jwt or api_key:
             return await call_next(request)
 
-        # 2. Strict whitelist check for staging/development/local environments
+        # 3. Allow Render internal routing / private IPs
+        def is_private_ip(ip: str) -> bool:
+            if ip in ("localhost", "::1", "testclient", "unknown"):
+                return True
+            # Match loopback, 10.x.x.x, 192.168.x.x
+            if ip.startswith("127.") or ip.startswith("10.") or ip.startswith("192.168."):
+                return True
+            # Match 172.16.x.x - 172.31.x.x
+            if ip.startswith("172."):
+                parts = ip.split(".")
+                if len(parts) >= 2:
+                    try:
+                        second_octet = int(parts[1])
+                        if 16 <= second_octet <= 31:
+                            return True
+                    except ValueError:
+                        pass
+            return False
+
+        if is_private_ip(client_ip):
+            return await call_next(request)
+
+        # 4. Allow Vercel frontend requests / allowed origins
+        origin = request.headers.get("origin") or ""
+        referer = request.headers.get("referer") or ""
+        
+        is_from_allowed_origin = False
+        allowed_origins = settings.allowed_origins_list
+        for allowed in allowed_origins:
+            if allowed in origin or allowed in referer:
+                is_from_allowed_origin = True
+                break
+
+        if ".vercel.app" in origin or ".vercel.app" in referer or "vercel" in origin or "vercel" in referer:
+            is_from_allowed_origin = True
+
+        if is_from_allowed_origin:
+            return await call_next(request)
+
+        # 5. Detect production/public deployment environments (Render/Vercel)
+        env_val = (os.environ.get("ENVIRONMENT") or os.environ.get("ENV") or settings.ENV).lower()
+        is_production = (
+            env_val in ("production", "prod") or
+            os.environ.get("RENDER") == "true" or
+            os.environ.get("VERCEL") == "1" or
+            os.environ.get("VERCEL") == "true"
+        )
+
+        if is_production:
+            logger.warning(
+                f"Production IP Whitelist safe-fallback bypass for unknown IP: {client_ip}, path: {path}"
+            )
+            return await call_next(request)
+
+        # 6. Strict whitelist check for local/dev/staging mode
         whitelist = settings.whitelisted_ips_list
         if client_ip not in whitelist:
             trace_id = request.headers.get("x-trace-id") or request.headers.get("X-Trace-Id") or "trace-not-found"
