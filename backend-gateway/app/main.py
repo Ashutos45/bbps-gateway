@@ -177,44 +177,54 @@ async def initialize_database():
 
         # Seed default users
         async with AsyncSessionLocal() as session:
-            existing_users = await session.execute(select(func.count(User.id)))
-            user_count = existing_users.scalar() or 0
+            logger.info("Checking and seeding default users individually...")
+            from app.utils.security import get_password_hash
             
-            if user_count == 0:
-                logger.info("Seeding default users into database...")
-                from app.utils.security import get_password_hash
+            default_users = [
+                {"username": "admin", "password": "admin123", "role": Role.SUPER_ADMIN, "email": "admin@bbps.com", "key": "SUPER_KEY_123"},
+                {"username": "regular_admin", "password": "admin123", "role": Role.ADMIN, "email": "regular_admin@bbps.com", "key": "ADMIN_KEY_123"},
+                {"username": "operations", "password": "operations123", "role": Role.OPERATIONS, "email": "operations@bbps.com", "key": "OPERATIONS_KEY_123"},
+                {"username": "client", "password": "client123", "role": Role.CLIENT, "email": "client@bbps.com"},
+                {"username": "auditor", "password": "auditor123", "role": Role.AUDITOR, "email": "auditor@bbps.com", "key": "AUDITOR_KEY_123"}
+            ]
+            
+            for user_data in default_users:
+                # 1. Check if user exists
+                user_stmt = select(User).where(User.username == user_data["username"])
+                user_res = await session.execute(user_stmt)
+                user = user_res.scalar_one_or_none()
                 
-                default_users = [
-                    {"username": "admin", "password": "admin123", "role": Role.SUPER_ADMIN, "email": "admin@bbps.com", "key": "SUPER_KEY_123"},
-                    {"username": "regular_admin", "password": "admin123", "role": Role.ADMIN, "email": "regular_admin@bbps.com", "key": "ADMIN_KEY_123"},
-                    {"username": "operations", "password": "operations123", "role": Role.OPERATIONS, "email": "operations@bbps.com", "key": "OPERATIONS_KEY_123"},
-                    {"username": "client", "password": "client123", "role": Role.CLIENT, "email": "client@bbps.com"},
-                    {"username": "auditor", "password": "auditor123", "role": Role.AUDITOR, "email": "auditor@bbps.com", "key": "AUDITOR_KEY_123"}
-                ]
-                for user_data in default_users:
+                if not user:
+                    logger.info(f"Seeding missing default user: {user_data['username']}")
                     u_id = uuid.uuid4()
-                    new_user = User(
+                    user = User(
                         id=u_id,
                         username=user_data["username"],
                         email=user_data["email"],
                         hashed_password=get_password_hash(user_data["password"]),
                         role=user_data["role"]
                     )
-                    session.add(new_user)
+                    session.add(user)
+                    await session.flush()  # populate ID for key mapping
+                
+                # 2. Check if access key exists (if key is defined)
+                if "key" in user_data:
+                    key_stmt = select(AdminAccessKey).where(AdminAccessKey.user_id == user.id)
+                    key_res = await session.execute(key_stmt)
+                    existing_key = key_res.scalar_one_or_none()
                     
-                    if "key" in user_data:
+                    if not existing_key:
+                        logger.info(f"Seeding missing default access key for user: {user.username}")
                         access_key = AdminAccessKey(
-                            user_id=u_id,
+                            user_id=user.id,
                             key_hash=get_password_hash(user_data["key"]),
                             role=user_data["role"],
                             is_active=True
                         )
                         session.add(access_key)
                         
-                await session.commit()
-                logger.info(f"Successfully seeded {len(default_users)} default users.")
-            else:
-                logger.info(f"Database already contains {user_count} users. Skipping user seeding.")
+            await session.commit()
+            logger.info("Default users and keys seeding completed successfully.")
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
 
