@@ -44,13 +44,17 @@ class AdminTokenRequest(BaseModel):
 class AdminCreateRequest(BaseModel):
     username: str
     email: str
-    password: str
     role: str  # ADMIN, OPERATIONS, AUDITOR
     access_level: Optional[int] = 1
 
 class AdminCreateResponse(BaseModel):
     success: bool
     username: str
+    admin_access_key: str
+
+class AdminActivationRequest(BaseModel):
+    username: str
+    password: str
     admin_access_key: str
 
 class StandaloneKeyRequest(BaseModel):
@@ -118,7 +122,7 @@ async def log_admin_action(db: AsyncSession, username: str, role: str, action: s
 
 # --- Public Client Onboarding Routes ---
 
-@router.post("/client/signup", response_model=SignupResponse)
+@router.post("/register-client", response_model=SignupResponse)
 async def client_signup(request: ClientSignupRequest, db: AsyncSession = Depends(get_db)):
     """
     Public self-registration for standard CLIENT accounts.
@@ -159,7 +163,7 @@ async def client_signup(request: ClientSignupRequest, db: AsyncSession = Depends
         "message": "Client self-registration successful"
     }
 
-@router.post("/client/token", response_model=TokenResponse)
+@router.post("/login-client", response_model=TokenResponse)
 async def client_login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     """
     Public standard login for CLIENT accounts.
@@ -199,17 +203,17 @@ async def client_login(request: LoginRequest, db: AsyncSession = Depends(get_db)
 
 # --- Separate Admin/Operational Authentication ---
 
-@router.post("/admin/token", response_model=TokenResponse)
-async def admin_login(request: AdminTokenRequest, db: AsyncSession = Depends(get_db)):
+@router.post("/admin/login", response_model=TokenResponse)
+async def admin_login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     """
-    Dedicated Admin Login portal requiring username, password, and secret ADMIN_ACCESS_KEY.
+    Dedicated Admin Login portal requiring username/email and password.
     """
     # 1. Lookup User (by username or email)
     stmt = select(User).where((User.username == request.username) | (User.email == request.username))
     res = await db.execute(stmt)
     user = res.scalar_one_or_none()
 
-    if not user or not verify_password(request.password, user.hashed_password):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid credentials. Verify username/email and password."
@@ -224,29 +228,16 @@ async def admin_login(request: AdminTokenRequest, db: AsyncSession = Depends(get
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Administrative account is deactivated."
+            detail="Administrative account is deactivated or not yet activated."
         )
 
-    # 2. Retrieve & Verify Admin Access Key
-    key_stmt = select(AdminAccessKey).where(AdminAccessKey.user_id == user.id, AdminAccessKey.is_active == True)
-    key_res = await db.execute(key_stmt)
-    keys = key_res.scalars().all()
-    
-    key_matched = False
-    for access_key in keys:
-        if access_key.expires_at and datetime.now(timezone.utc) > access_key.expires_at:
-            continue
-        if verify_password(request.admin_access_key, access_key.key_hash):
-            key_matched = True
-            break
-
-    if not key_matched:
+    if not verify_password(request.password, user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized: Invalid or expired ADMIN_ACCESS_KEY."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid credentials. Verify username/email and password."
         )
 
-    # 3. Create Access Token
+    # Create Access Token
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role},
         expires_delta=timedelta(minutes=60)
@@ -306,36 +297,20 @@ async def generate_standalone_key(
         "admin_access_key": raw_key
     }
 
-@router.post("/admin/signup", response_model=SignupResponse)
-async def admin_signup(
-    request: AdminSignupRequest,
+
+
+@router.post("/admin/activate", response_model=SignupResponse)
+async def activate_admin_account(
+    request: AdminActivationRequest,
     req_obj: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Allows a new administrative staff user to register themselves using a valid standalone ADMIN_ACCESS_KEY.
+    First-time Admin Activation flow verifying key exists, unconsumed, unexpired,
+    and sets up username/email and password.
     """
-    # Check duplicate username
-    username_stmt = select(User).where(User.username == request.username)
-    username_res = await db.execute(username_stmt)
-    if username_res.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
-        )
-
-    # Check duplicate email
-    email_stmt = select(User).where(User.email == request.email)
-    email_res = await db.execute(email_stmt)
-    if email_res.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-
-    # Lookup unassigned and active admin access keys
+    # 1. Lookup unconsumed and active admin access keys
     key_stmt = select(AdminAccessKey).where(
-        AdminAccessKey.user_id == None,
         AdminAccessKey.is_active == True
     )
     key_res = await db.execute(key_stmt)
@@ -352,54 +327,111 @@ async def admin_signup(
     if not target_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized: Invalid, expired, or already used ADMIN_ACCESS_KEY."
+            detail="Unauthorized: Invalid, expired, or already used activation key."
         )
 
-    target_role = target_key.role or Role.ADMIN
-
-    # Create the user
-    new_user_id = uuid.uuid4()
-    hashed_password = get_password_hash(request.password)
-    new_user = User(
-        id=new_user_id,
-        username=request.username,
-        email=request.email,
-        hashed_password=hashed_password,
-        role=target_role,
-        is_active=True
-    )
-    db.add(new_user)
-
-    # Bind key to user
-    target_key.user_id = new_user_id
-    await db.commit()
-
-    # Log action
-    await log_admin_action(
-        db,
-        request.username,
-        target_role,
-        "ADMIN_SELF_REGISTRATION",
-        f"Admin user registered themselves as role: {target_role} using access key",
-        req_obj
-    )
-
-    return {
-        "success": True,
-        "message": f"Administrative registration successful as role {target_role}"
-    }
+    # 2. Check if the key is associated with a pre-created invitation (user_id is not None)
+    if target_key.user_id:
+        user_stmt = select(User).where(User.id == target_key.user_id)
+        user_res = await db.execute(user_stmt)
+        user = user_res.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User associated with activation key not found."
+            )
+            
+        # Verify username or email matches
+        if request.username.lower() not in (user.username.lower(), user.email.lower()):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid credentials: username/email does not match invitation."
+            )
+            
+        # Update user's password and activate
+        user.hashed_password = get_password_hash(request.password)
+        user.is_active = True
+        
+        # Mark key as consumed
+        target_key.is_active = False
+        await db.commit()
+        
+        # Log action
+        await log_admin_action(
+            db,
+            user.username,
+            user.role,
+            "ADMIN_ACTIVATION",
+            f"Admin account activated for {user.username} using key",
+            req_obj
+        )
+        
+        return {
+            "success": True,
+            "message": f"Administrative account activated successfully for {user.username}. You can now log in."
+        }
+        
+    else:
+        # Standalone Key Flow (unassigned key)
+        email = request.username
+        username = request.username
+        if "@" in request.username:
+            username = request.username.split("@")[0]
+        else:
+            email = f"{request.username}@bbps-gateway.in"
+            
+        # Verify uniqueness
+        user_exists_stmt = select(User).where((User.username == username) | (User.email == email))
+        if (await db.execute(user_exists_stmt)).scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username or email already registered"
+            )
+            
+        target_role = target_key.role or Role.ADMIN
+        new_user_id = uuid.uuid4()
+        new_user = User(
+            id=new_user_id,
+            username=username,
+            email=email,
+            hashed_password=get_password_hash(request.password),
+            role=target_role,
+            is_active=True
+        )
+        db.add(new_user)
+        
+        # Bind and consume key
+        target_key.user_id = new_user_id
+        target_key.is_active = False
+        await db.commit()
+        
+        # Log action
+        await log_admin_action(
+            db,
+            username,
+            target_role,
+            "ADMIN_ACTIVATION",
+            f"Admin account registered and activated as role: {target_role} using standalone key",
+            req_obj
+        )
+        
+        return {
+            "success": True,
+            "message": f"Administrative registration and activation successful as role {target_role}"
+        }
 
 # --- Super Admin Operations (Restricted to SUPER_ADMIN) ---
 
-@router.post("/admin/users", response_model=AdminCreateResponse)
+@router.post("/admin/create", response_model=AdminCreateResponse)
 async def provision_admin_user(
     request: AdminCreateRequest,
     req_obj: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role([Role.SUPER_ADMIN]))
+    current_user: dict = Depends(require_roles([Role.SUPER_ADMIN, Role.ADMIN]))
 ):
     """
-    Allows SUPER_ADMIN to provision new ADMIN, OPERATIONS, or AUDITOR staff accounts and generates a unique ADMIN_ACCESS_KEY.
+    Allows SUPER_ADMIN or ADMIN to provision new ADMIN, OPERATIONS, or AUDITOR staff accounts and generates a unique ADMIN_ACCESS_KEY.
     """
     role_upper = request.role.upper()
     if role_upper not in (Role.ADMIN, Role.OPERATIONS, Role.AUDITOR):
@@ -417,15 +449,15 @@ async def provision_admin_user(
     if (await db.execute(email_stmt)).scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already exists")
 
-    # Save User
+    # Save User as inactive
     u_id = uuid.uuid4()
     new_user = User(
         id=u_id,
         username=request.username,
         email=request.email,
-        hashed_password=get_password_hash(request.password),
+        hashed_password=get_password_hash("TEMP_DUMMY_PWD_BBPS_GATEWAY"),
         role=role_upper,
-        is_active=True
+        is_active=False
     )
     db.add(new_user)
 
@@ -434,6 +466,7 @@ async def provision_admin_user(
     access_key = AdminAccessKey(
         user_id=u_id,
         key_hash=get_password_hash(raw_key),
+        role=role_upper,
         is_active=True,
         expires_at=datetime.now(timezone.utc) + timedelta(days=90) # default 90 days expiry
     )

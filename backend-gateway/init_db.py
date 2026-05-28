@@ -52,6 +52,61 @@ async def initialize_database():
         csv_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mock_billers_10000.csv")
         await seed_from_csv(csv_file)
         logger.info("Biller data seeded successfully.")
+
+        # Seed default users and access keys
+        from app.database.db import AsyncSessionLocal
+        from app.auth.role_manager import Role
+        from app.utils.security import get_password_hash
+        from sqlalchemy import select
+        import uuid
+
+        async with AsyncSessionLocal() as session:
+            logger.info("Seeding default users and keys...")
+            default_users = [
+                {"username": "admin", "password": "admin123", "role": Role.SUPER_ADMIN, "email": "admin@bbps.com", "key": "SUPER_KEY_123"},
+                {"username": "regular_admin", "password": "admin123", "role": Role.ADMIN, "email": "regular_admin@bbps.com", "key": "ADMIN_KEY_123"},
+                {"username": "operations", "password": "operations123", "role": Role.OPERATIONS, "email": "operations@bbps.com", "key": "OPERATIONS_KEY_123"},
+                {"username": "client", "password": "client123", "role": Role.CLIENT, "email": "client@bbps.com"},
+                {"username": "auditor", "password": "auditor123", "role": Role.AUDITOR, "email": "auditor@bbps.com", "key": "AUDITOR_KEY_123"}
+            ]
+            
+            for user_data in default_users:
+                # 1. Check if user exists
+                user_stmt = select(User).where(User.username == user_data["username"])
+                user_res = await session.execute(user_stmt)
+                user = user_res.scalar_one_or_none()
+                
+                if not user:
+                    logger.info(f"Seeding default user: {user_data['username']}")
+                    u_id = uuid.uuid4()
+                    user = User(
+                        id=u_id,
+                        username=user_data["username"],
+                        email=user_data["email"],
+                        hashed_password=get_password_hash(user_data["password"]),
+                        role=user_data["role"]
+                    )
+                    session.add(user)
+                    await session.flush()  # populate ID for key mapping
+                
+                # 2. Check if access key exists (if key is defined)
+                if "key" in user_data:
+                    key_stmt = select(AdminAccessKey).where(AdminAccessKey.user_id == user.id)
+                    key_res = await session.execute(key_stmt)
+                    existing_key = key_res.scalar_one_or_none()
+                    
+                    if not existing_key:
+                        logger.info(f"Seeding default access key for user: {user.username}")
+                        access_key = AdminAccessKey(
+                            user_id=user.id,
+                            key_hash=get_password_hash(user_data["key"]),
+                            role=user_data["role"],
+                            is_active=True
+                        )
+                        session.add(access_key)
+                        
+            await session.commit()
+            logger.info("Default users and access keys seeded successfully.")
         
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")

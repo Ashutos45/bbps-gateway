@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from app.database.models import PaymentIdempotency
 from app.core.exceptions import IdempotencyViolationError
 from loguru import logger
@@ -46,7 +47,13 @@ class IdempotencyEngine:
             )
             session.add(record)
             # Flush changes to acquire database lock and trigger unique constraints checks
-            await session.flush()
+            try:
+                await session.flush()
+            except IntegrityError:
+                logger.warning(f"IntegrityError: Transaction for key '{idempotency_key}' is already in progress.")
+                raise IdempotencyViolationError(
+                    f"A transaction for key '{idempotency_key}' is already in progress."
+                )
             return record
             
         # Key exists. Verify status

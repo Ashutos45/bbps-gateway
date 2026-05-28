@@ -91,17 +91,16 @@ export const SuperAdminConsole: React.FC = () => {
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !email.trim() || !password) {
+    if (!username.trim() || !email.trim()) {
       addToast('error', 'Please fill in all staff provisioning fields.');
       return;
     }
 
     setProvisioning(true);
     try {
-      const res = await apiClient.post('/auth/admin/users', {
+      const res = await apiClient.post('/auth/admin/create', {
         username: username.trim(),
         email: email.trim(),
-        password,
         role: role.toUpperCase()
       });
 
@@ -112,7 +111,6 @@ export const SuperAdminConsole: React.FC = () => {
       // Reset form
       setUsername('');
       setEmail('');
-      setPassword('');
       
       fetchKeys();
       fetchLogs();
@@ -237,18 +235,7 @@ export const SuperAdminConsole: React.FC = () => {
                 />
               </div>
 
-              {/* Password */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Initial Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="input-premium"
-                  required
-                />
-              </div>
+              {/* Password setup is completed by the user during activation */}
 
               {/* Role Selection */}
               <div className="space-y-1.5">

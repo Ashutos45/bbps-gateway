@@ -22,7 +22,7 @@ async def test_client_self_registration_and_login():
             }
             
             # 1. Register Client (public)
-            signup_res = await ac.post("/auth/client/signup", json=signup_payload)
+            signup_res = await ac.post("/auth/register-client", json=signup_payload)
             assert signup_res.status_code == 200
             assert signup_res.json()["success"] is True
             
@@ -31,7 +31,7 @@ async def test_client_self_registration_and_login():
                 "username": username,
                 "password": "Password123!"
             }
-            login_res = await ac.post("/auth/client/token", json=login_payload)
+            login_res = await ac.post("/auth/login-client", json=login_payload)
             assert login_res.status_code == 200
             
             auth_data = login_res.json()
@@ -43,38 +43,35 @@ async def test_client_self_registration_and_login():
 @pytest.mark.asyncio
 async def test_admin_access_key_login_flows():
     """
-    Tests the dual-factor admin login requiring username, password, and ADMIN_ACCESS_KEY.
+    Tests that admins login using only username/email and password (no key required for active accounts),
+    and check access restrictions.
     """
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            # 1. Login with correct Admin Access Key (using seeded values)
+            # 1. Login with correct Admin Credentials (no key needed)
             admin_payload = {
                 "username": "admin",
-                "password": "admin123",
-                "admin_access_key": "SUPER_KEY_123"
+                "password": "admin123"
             }
-            res_ok = await ac.post("/auth/admin/token", json=admin_payload)
+            res_ok = await ac.post("/auth/admin/login", json=admin_payload)
             assert res_ok.status_code == 200
             assert "access_token" in res_ok.json()
             assert res_ok.json()["role"] == Role.SUPER_ADMIN
 
-            # 2. Login with incorrect Admin Access Key
-            admin_payload_bad_key = {
+            # 2. Login with incorrect password fails
+            admin_payload_bad_pwd = {
                 "username": "admin",
-                "password": "admin123",
-                "admin_access_key": "WRONG_KEY"
+                "password": "wrong_password"
             }
-            res_bad_key = await ac.post("/auth/admin/token", json=admin_payload_bad_key)
-            assert res_bad_key.status_code == 401
-            assert "invalid or expired" in res_bad_key.json()["detail"].lower()
+            res_bad_pwd = await ac.post("/auth/admin/login", json=admin_payload_bad_pwd)
+            assert res_bad_pwd.status_code == 400
 
-            # 3. Client trying to login through the Admin endpoint
+            # 3. Client trying to login through the Admin endpoint fails
             client_payload = {
                 "username": "client",
-                "password": "client123",
-                "admin_access_key": "ANY_KEY"
+                "password": "client123"
             }
-            res_client_blocked = await ac.post("/auth/admin/token", json=client_payload)
+            res_client_blocked = await ac.post("/auth/admin/login", json=client_payload)
             assert res_client_blocked.status_code == 403
             assert "client accounts must authenticate" in res_client_blocked.json()["detail"].lower()
     finally:
@@ -83,61 +80,77 @@ async def test_admin_access_key_login_flows():
 @pytest.mark.asyncio
 async def test_super_admin_provisioning_privilege_boundary():
     """
-    Tests that only SUPER_ADMIN can provision admins, list admin keys, or view audit logs,
-    and regular ADMINs or CLIENTs are blocked.
+    Tests that SUPER_ADMIN and ADMIN can provision staff, and new staff must activate their accounts before login.
     """
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
             # 1. Authenticate as SUPER_ADMIN
-            sa_login = await ac.post("/auth/admin/token", json={
+            sa_login = await ac.post("/auth/admin/login", json={
                 "username": "admin",
-                "password": "admin123",
-                "admin_access_key": "SUPER_KEY_123"
+                "password": "admin123"
             })
             sa_token = sa_login.json()["access_token"]
             sa_headers = {"Authorization": f"Bearer {sa_token}"}
 
             # 2. Authenticate as regular ADMIN
-            admin_login = await ac.post("/auth/admin/token", json={
+            admin_login = await ac.post("/auth/admin/login", json={
                 "username": "regular_admin",
-                "password": "admin123",
-                "admin_access_key": "ADMIN_KEY_123"
+                "password": "admin123"
             })
             admin_token = admin_login.json()["access_token"]
             admin_headers = {"Authorization": f"Bearer {admin_token}"}
 
-            # 3. SUPER_ADMIN provisions a new Operations user
+            # 3. SUPER_ADMIN provisions a new Operations user (invitation flow, no password)
             new_ops_payload = {
                 "username": f"ops_prov_{uuid.uuid4().hex[:4]}",
                 "email": f"ops_prov_{uuid.uuid4().hex[:4]}@bbps.com",
-                "password": "OpsPassword123!",
                 "role": "OPERATIONS"
             }
-            res_prov = await ac.post("/auth/admin/users", json=new_ops_payload, headers=sa_headers)
+            res_prov = await ac.post("/auth/admin/create", json=new_ops_payload, headers=sa_headers)
             assert res_prov.status_code == 200
             assert res_prov.json()["success"] is True
             assert "admin_access_key" in res_prov.json()
             generated_key = res_prov.json()["admin_access_key"]
 
-            # 4. Try logging in with the newly provisioned Operations account & generated key
-            ops_login = await ac.post("/auth/admin/token", json={
+            # 4. Try logging in as the provisioned admin before activation (Should fail with 403)
+            res_pre_activate = await ac.post("/auth/admin/login", json={
                 "username": new_ops_payload["username"],
-                "password": new_ops_payload["password"],
+                "password": "OpsPassword123!"
+            })
+            assert res_pre_activate.status_code == 403
+
+            # 5. Activate the Operations user using the access key and setting their password
+            res_activate = await ac.post("/auth/admin/activate", json={
+                "username": new_ops_payload["username"],
+                "password": "OpsPassword123!",
                 "admin_access_key": generated_key
+            })
+            assert res_activate.status_code == 200
+            assert res_activate.json()["success"] is True
+
+            # 6. Try logging in with the newly activated Operations account (no key required)
+            ops_login = await ac.post("/auth/admin/login", json={
+                "username": new_ops_payload["username"],
+                "password": "OpsPassword123!"
             })
             assert ops_login.status_code == 200
             assert ops_login.json()["role"] == Role.OPERATIONS
 
-            # 5. Regular ADMIN attempts to provision an admin (Should fail with 403)
-            res_prov_failed = await ac.post("/auth/admin/users", json=new_ops_payload, headers=admin_headers)
-            assert res_prov_failed.status_code == 403
+            # 7. Regular ADMIN attempts to provision an admin (Should succeed as ADMIN role can provision staff)
+            new_ops_2 = {
+                "username": f"ops_prov_{uuid.uuid4().hex[:4]}",
+                "email": f"ops_prov_{uuid.uuid4().hex[:4]}@bbps.com",
+                "role": "OPERATIONS"
+            }
+            res_prov_ok = await ac.post("/auth/admin/create", json=new_ops_2, headers=admin_headers)
+            assert res_prov_ok.status_code == 200
 
-            # 6. SUPER_ADMIN lists keys
+            # 8. SUPER_ADMIN lists keys
             res_keys = await ac.get("/auth/admin/keys", headers=sa_headers)
             assert res_keys.status_code == 200
             assert len(res_keys.json()) >= 1
 
-            # 7. Regular ADMIN attempts to list keys (Should fail with 403)
+            # 9. Regular ADMIN attempts to list keys (Should fail with 403)
             res_keys_failed = await ac.get("/auth/admin/keys", headers=admin_headers)
             assert res_keys_failed.status_code == 403
     finally:
@@ -147,15 +160,14 @@ async def test_super_admin_provisioning_privilege_boundary():
 async def test_admin_standalone_key_generation_and_self_signup():
     """
     Tests that a SUPER_ADMIN can pre-generate a standalone ADMIN_ACCESS_KEY,
-    and a new staff user can register themselves using that key.
+    and a new staff user can activate/register themselves using that key.
     """
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
             # 1. Login as SUPER_ADMIN
-            sa_login = await ac.post("/auth/admin/token", json={
+            sa_login = await ac.post("/auth/admin/login", json={
                 "username": "admin",
-                "password": "admin123",
-                "admin_access_key": "SUPER_KEY_123"
+                "password": "admin123"
             })
             sa_token = sa_login.json()["access_token"]
             sa_headers = {"Authorization": f"Bearer {sa_token}"}
@@ -170,35 +182,32 @@ async def test_admin_standalone_key_generation_and_self_signup():
             standalone_key = gen_key_res.json()["admin_access_key"]
             assert standalone_key.startswith("ADM_")
 
-            # 3. New staff registers themselves with the key
+            # 3. New staff registers/activates themselves with the key
             new_staff_username = f"self_staff_{uuid.uuid4().hex[:6]}"
             signup_payload = {
                 "username": new_staff_username,
-                "email": f"{new_staff_username}@bbps.com",
                 "password": "StaffPassword123!",
                 "admin_access_key": standalone_key
             }
-            signup_res = await ac.post("/auth/admin/signup", json=signup_payload)
+            signup_res = await ac.post("/auth/admin/activate", json=signup_payload)
             assert signup_res.status_code == 200
             assert signup_res.json()["success"] is True
 
-            # 4. Attempt login as the new staff with the key
-            staff_login = await ac.post("/auth/admin/token", json={
+            # 4. Attempt login as the new staff (no key required)
+            staff_login = await ac.post("/auth/admin/login", json={
                 "username": new_staff_username,
-                "password": signup_payload["password"],
-                "admin_access_key": standalone_key
+                "password": signup_payload["password"]
             })
             assert staff_login.status_code == 200
             assert staff_login.json()["role"] == Role.AUDITOR
 
-            # 5. Attempting to register another user with the same key must fail (it is now assigned/used)
+            # 5. Attempting to activate another user with the same key must fail (it is now consumed)
             dup_signup_payload = {
                 "username": f"dup_staff_{uuid.uuid4().hex[:6]}",
-                "email": f"dup_staff_{uuid.uuid4().hex[:6]}@bbps.com",
                 "password": "StaffPassword123!",
                 "admin_access_key": standalone_key
             }
-            dup_res = await ac.post("/auth/admin/signup", json=dup_signup_payload)
+            dup_res = await ac.post("/auth/admin/activate", json=dup_signup_payload)
             assert dup_res.status_code == 401
     finally:
         await engine.dispose()

@@ -27,6 +27,8 @@ import Signup from './pages/Signup';
 import Unauthorized from './pages/Unauthorized';
 import AdminProvisioning from './pages/AdminProvisioning';
 import SuperAdminConsole from './pages/SuperAdminConsole';
+import ActivateAdmin from './pages/ActivateAdmin';
+import AdminLogin from './pages/AdminLogin';
 import { ToastManager } from './components/ToastManager';
 import { useAuthStore } from './state/authStore';
 import { useToastStore } from './state/toastStore';
@@ -69,7 +71,9 @@ export const App: React.FC = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/login-admin" element={<AdminLogin />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/activate-admin" element={<ActivateAdmin />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         <ToastManager />

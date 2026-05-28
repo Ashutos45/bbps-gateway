@@ -15,13 +15,12 @@ async def test_jwt_login_flow():
   """
   try:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-      # 1. Login request with admin credentials
+      # 1. Login request with admin credentials (no key required for existing active admins)
       login_payload = {
         "username": "admin", 
-        "password": "admin123",
-        "admin_access_key": "SUPER_KEY_123"
+        "password": "admin123"
       }
-      login_res = await ac.post("/auth/admin/token", json=login_payload)
+      login_res = await ac.post("/auth/admin/login", json=login_payload)
       assert login_res.status_code == 200
       
       auth_data = login_res.json()
@@ -58,10 +57,9 @@ async def test_rbac_boundary_restrictions():
   try:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
       # 1. Login as operations
-      login_res = await ac.post("/auth/admin/token", json={
+      login_res = await ac.post("/auth/admin/login", json={
         "username": "operations", 
-        "password": "operations123",
-        "admin_access_key": "OPERATIONS_KEY_123"
+        "password": "operations123"
       })
       operator_token = login_res.json()["access_token"]
       
@@ -82,10 +80,9 @@ async def test_rbac_boundary_restrictions():
 
       # 3. Access stream endpoint as Auditor (Auditor role does not inherit Client or Admin access)
       stream_url = "/BOBCOU/BBPS/mbanking/billpay/billers/stream"
-      login_res_auditor = await ac.post("/auth/admin/token", json={
+      login_res_auditor = await ac.post("/auth/admin/login", json={
         "username": "auditor", 
-        "password": "auditor123",
-        "admin_access_key": "AUDITOR_KEY_123"
+        "password": "auditor123"
       })
       auditor_token = login_res_auditor.json()["access_token"]
       
@@ -154,10 +151,9 @@ async def test_admin_provisioning_and_lifecycles():
   try:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
       # 1. Login as Super Admin
-      admin_login = await ac.post("/auth/admin/token", json={
+      admin_login = await ac.post("/auth/admin/login", json={
         "username": "admin", 
-        "password": "admin123",
-        "admin_access_key": "SUPER_KEY_123"
+        "password": "admin123"
       })
       admin_token = admin_login.json()["access_token"]
       admin_headers = {"Authorization": f"Bearer {admin_token}"}
@@ -170,11 +166,11 @@ async def test_admin_provisioning_and_lifecycles():
         "organization": "TestOrg"
       }
       # Public signup automatically forces CLIENT role
-      res_client_signup = await ac.post("/auth/client/signup", json=signup_body)
+      res_client_signup = await ac.post("/auth/register-client", json=signup_body)
       assert res_client_signup.status_code == 200
       
       # Try logging in as the client
-      client_login = await ac.post("/auth/client/token", json={
+      client_login = await ac.post("/auth/login-client", json={
         "username": signup_body["username"],
         "password": signup_body["password"]
       })
@@ -182,20 +178,28 @@ async def test_admin_provisioning_and_lifecycles():
       assert client_login.json()["role"] == "CLIENT"
 
       # 3. Super Admin provisions a regular ADMIN user
-      res_prov = await ac.post("/auth/admin/users", json={
-        "username": "new_admin_user",
-        "email": "new_admin@bbps.com",
-        "password": "AdminPassword123!",
+      new_admin_username = f"admin_{uuid.uuid4().hex[:6]}"
+      new_admin_email = f"{new_admin_username}@bbps.com"
+      res_prov = await ac.post("/auth/admin/create", json={
+        "username": new_admin_username,
+        "email": new_admin_email,
         "role": "ADMIN"
       }, headers=admin_headers)
       assert res_prov.status_code == 200
       prov_key = res_prov.json()["admin_access_key"]
 
-      # 4. Login as provisioned admin
-      prov_admin_login = await ac.post("/auth/admin/token", json={
-        "username": "new_admin_user",
+      # Activate the newly provisioned admin
+      res_activate = await ac.post("/auth/admin/activate", json={
+        "username": new_admin_username,
         "password": "AdminPassword123!",
         "admin_access_key": prov_key
+      })
+      assert res_activate.status_code == 200
+
+      # 4. Login as activated admin (no key required)
+      prov_admin_login = await ac.post("/auth/admin/login", json={
+        "username": new_admin_username,
+        "password": "AdminPassword123!"
       })
       assert prov_admin_login.status_code == 200
       prov_admin_token = prov_admin_login.json()["access_token"]
@@ -206,7 +210,7 @@ async def test_admin_provisioning_and_lifecycles():
       assert res_deactivate.status_code == 200
 
       # 6. Block login of deactivated user
-      client_login_blocked = await ac.post("/auth/client/token", json={
+      client_login_blocked = await ac.post("/auth/login-client", json={
         "username": signup_body["username"],
         "password": signup_body["password"]
       })

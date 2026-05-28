@@ -369,6 +369,10 @@ class IPWhitelistingMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         path_lower = path.lower()
         
+        # Bypass OPTIONS preflight requests
+        if request.method == "OPTIONS":
+            return await call_next(request)
+        
         # 1. Allow bypass paths (Auth routes, Swagger/docs, health, static, demo/testing)
         is_bypass = False
         for system_path in ["/docs", "/redoc", "/openapi.json", "/health", "/favicon.ico", "/static", "/auth", "/demo", "/"]:
