@@ -92,7 +92,7 @@ export const TelemetryDashboard: React.FC = () => {
               Prometheus Exposition Feed Preview
             </h4>
             <a
-              href="http://localhost:8000/metrics"
+              href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/metrics`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors underline underline-offset-2"

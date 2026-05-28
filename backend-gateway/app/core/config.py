@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/bbps_gateway_db"
     LOG_LEVEL: str = "INFO"
 
-    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173"
+    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173,http://127.0.0.1:4173,https://bbps-gateway.vercel.app,https://bbps-gateway-tlix.vercel.app"
 
     @property
     def allowed_origins_list(self) -> list[str]:

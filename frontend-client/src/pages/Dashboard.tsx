@@ -111,7 +111,7 @@ export const Dashboard: React.FC = () => {
 
     try {
       const response = await apiClient.post(`/BOBCOU/BBPS/${sourceId}/billpay/billers/file`, {
-        callbackUrl: 'http://localhost:8000/callback/file'
+        callbackUrl: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/callback/file`
       });
       const fileId = response.data.fileid;
       setCompileFileId(fileId);
