@@ -4,6 +4,7 @@ import { useAuthStore } from '../state/authStore';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  timeout: 15000,
   // Do not parse JSON automatically to preserve the exact raw response body string for signature verification
   transformResponse: [(data) => data],
 });
