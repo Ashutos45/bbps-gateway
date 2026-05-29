@@ -95,22 +95,43 @@ export const SuperAdminConsole: React.FC = () => {
       addToast('error', 'Please fill in all staff provisioning fields.');
       return;
     }
+    if (role === 'CLIENT' && !password) {
+      addToast('error', 'Password is required to provision a Client account.');
+      return;
+    }
 
     setProvisioning(true);
     try {
-      const res = await apiClient.post('/auth/admin/create', {
-        username: username.trim(),
-        email: email.trim(),
-        role: role.toUpperCase()
-      });
+      if (role === 'CLIENT') {
+        await apiClient.post('/auth/register-client', {
+          username: username.trim(),
+          email: email.trim(),
+          password,
+          organization: null,
+          company: null
+        });
+        addToast('success', `Provisioned client account ${username} successfully.`);
+        
+        // Reset form
+        setUsername('');
+        setEmail('');
+        setPassword('');
+      } else {
+        const res = await apiClient.post('/auth/admin/create', {
+          username: username.trim(),
+          email: email.trim(),
+          role: role.toUpperCase()
+        });
 
-      addToast('success', `Provisioned operational account ${username} successfully.`);
-      setGeneratedKey(res.data.admin_access_key);
-      setGeneratedUser(username.trim());
-      
-      // Reset form
-      setUsername('');
-      setEmail('');
+        addToast('success', `Provisioned operational account ${username} successfully.`);
+        setGeneratedKey(res.data.admin_access_key);
+        setGeneratedUser(username.trim());
+        
+        // Reset form
+        setUsername('');
+        setEmail('');
+        setPassword('');
+      }
       
       fetchKeys();
       fetchLogs();
@@ -235,7 +256,24 @@ export const SuperAdminConsole: React.FC = () => {
                 />
               </div>
 
-              {/* Password setup is completed by the user during activation */}
+              {/* Password */}
+              {role === 'CLIENT' ? (
+                <div className="space-y-1.5 mb-3">
+                  <label className="block text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Initial Password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password..."
+                    className="input-premium"
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="p-3.5 mb-3 bg-rose-950/10 border border-rose-900/20 rounded-xl text-[10.5px] text-zinc-400 leading-normal font-sans">
+                  <span className="font-bold text-rose-400">Staff Notice:</span> Administrative accounts are provisioned as inactive. A temporary key will be generated for the user to activate their account and set their password.
+                </div>
+              )}
 
               {/* Role Selection */}
               <div className="space-y-1.5">
@@ -245,6 +283,7 @@ export const SuperAdminConsole: React.FC = () => {
                   onChange={(e) => setRole(e.target.value)}
                   className="input-premium bg-zinc-950 pr-8"
                 >
+                  <option value="CLIENT">CLIENT (Standard Customer Portal)</option>
                   <option value="ADMIN">ADMIN (Central Administrator)</option>
                   <option value="OPERATIONS">OPERATIONS (Sweeps & Reconciliation)</option>
                   <option value="AUDITOR">AUDITOR (Read-Only Compliance Logs)</option>
@@ -254,9 +293,9 @@ export const SuperAdminConsole: React.FC = () => {
               <button
                 type="submit"
                 disabled={provisioning}
-                className="w-full mt-2 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-black font-extrabold py-2.5 px-4 rounded-xl transition-all cursor-pointer text-center block text-[11px]"
+                className="w-full mt-4 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-black font-extrabold py-2.5 px-4 rounded-xl transition-all cursor-pointer text-center block text-[11px]"
               >
-                {provisioning ? 'PROVISIONING...' : 'PROVISION STAFF'}
+                {provisioning ? 'PROVISIONING...' : 'PROVISION USER'}
               </button>
             </form>
           </div>
