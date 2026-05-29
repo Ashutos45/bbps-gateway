@@ -61,25 +61,52 @@ export const AdminProvisioning: React.FC = () => {
     fetchUsers();
   }, []);
 
+  // Modal for displaying newly generated secret admin key
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+  const [generatedUser, setGeneratedUser] = useState<string | null>(null);
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUsername || !newEmail || !newPassword) {
+    if (!newUsername.trim() || !newEmail.trim()) {
       addToast('error', 'Please fill in all provisioning fields.');
+      return;
+    }
+    if (newRole === 'CLIENT' && !newPassword) {
+      addToast('error', 'Password is required to provision a Client account.');
       return;
     }
 
     setCreating(true);
     try {
-      await apiClient.post('/auth/signup', {
-        username: newUsername,
-        email: newEmail,
-        password: newPassword,
-        role: newRole
-      });
-      addToast('success', `Successfully provisioned ${newUsername} as ${newRole}.`);
-      setNewUsername('');
-      setNewEmail('');
-      setNewPassword('');
+      if (newRole === 'CLIENT') {
+        await apiClient.post('/auth/register-client', {
+          username: newUsername.trim(),
+          email: newEmail.trim(),
+          password: newPassword,
+          organization: null,
+          company: null
+        });
+        addToast('success', `Successfully provisioned client account ${newUsername}.`);
+        
+        // Reset form
+        setNewUsername('');
+        setNewEmail('');
+        setNewPassword('');
+      } else {
+        const res = await apiClient.post('/auth/admin/create', {
+          username: newUsername.trim(),
+          email: newEmail.trim(),
+          role: newRole.toUpperCase()
+        });
+        addToast('success', `Successfully provisioned ${newUsername} as ${newRole}.`);
+        setGeneratedKey(res.data.admin_access_key);
+        setGeneratedUser(newUsername.trim());
+        
+        // Reset form
+        setNewUsername('');
+        setNewEmail('');
+        setNewPassword('');
+      }
       fetchUsers();
     } catch (err: any) {
       addToast('error', `Provisioning failed: ${err.response?.data?.detail || err.message}`);
@@ -196,29 +223,35 @@ export const AdminProvisioning: React.FC = () => {
             </div>
 
             {/* Password */}
-            <div className="space-y-1.5">
-              <label className="block text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Initial Password</label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-650">
-                  <KeyRound size={12} />
-                </span>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Secret access key..."
-                  className="input-premium pl-9 pr-9"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-zinc-350 cursor-pointer"
-                >
-                  {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
-                </button>
+            {newRole === 'CLIENT' ? (
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Initial Password</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-650">
+                    <KeyRound size={12} />
+                  </span>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter password..."
+                    className="input-premium pl-9 pr-9"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-zinc-350 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-3.5 bg-rose-950/10 border border-rose-900/20 rounded-xl text-[10.5px] text-zinc-400 leading-normal font-sans">
+                <span className="font-bold text-rose-400">Staff Account Notice:</span> Administrative accounts are provisioned as inactive. A temporary key will be generated for the user to activate their account and set their password.
+              </div>
+            )}
 
             {/* Role Selection */}
             <div className="space-y-1.5">
@@ -382,6 +415,48 @@ export const AdminProvisioning: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ACCESS KEY COPY MODAL */}
+      {generatedKey && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 font-mono text-xs">
+          <div className="glass-card rounded-xl p-6 border-rose-800 bg-[#09090b] max-w-md w-full space-y-4 shadow-xl">
+            <div className="flex items-center gap-1.5 border-b border-zinc-900 pb-2 text-rose-400">
+              <ShieldAlert size={16} />
+              <h3 className="text-xs font-bold uppercase tracking-wider">Secret Provisioning Key Generated</h3>
+            </div>
+            
+            <div className="bg-rose-950/10 border border-rose-900/20 p-4 rounded-xl space-y-2 leading-relaxed text-zinc-400 font-sans text-xs">
+              <p>A new secure access key has been generated for: <strong className="text-rose-400 font-mono">{generatedUser}</strong>.</p>
+              <p className="text-rose-350 font-bold flex items-center gap-1.5 mt-2">
+                <ShieldAlert size={14} />
+                <span>CRITICAL: Copy this key now! It will NOT be shown again.</span>
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-zinc-555 uppercase font-bold tracking-wider">ADMIN_ACCESS_KEY</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={generatedKey}
+                  readOnly
+                  className="input-premium font-mono bg-zinc-950 text-rose-300 font-bold border-rose-900/40 select-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => { setGeneratedKey(null); setGeneratedUser(null); }}
+                className="bg-rose-600 hover:bg-rose-500 text-black py-2 px-6 rounded-lg cursor-pointer text-[10px] font-bold font-mono"
+              >
+                DISMISS KEY
+              </button>
+            </div>
           </div>
         </div>
       )}
