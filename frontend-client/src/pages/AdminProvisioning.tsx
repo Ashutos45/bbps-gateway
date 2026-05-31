@@ -45,17 +45,6 @@ interface IPWhitelistItem {
   created_at: string;
 }
 
-interface TrustedDeviceItem {
-  id: string;
-  user_id: string;
-  device_id: string;
-  fingerprint: string;
-  last_ip: string;
-  last_login_time: string;
-  is_approved: boolean;
-  created_at: string;
-}
-
 interface RequestLogItem {
   id: string;
   request_id: string;
@@ -89,7 +78,7 @@ interface SecurityStats {
 }
 
 export const AdminProvisioning: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'users' | 'whitelist' | 'requests' | 'security' | 'devices'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'whitelist' | 'requests' | 'security'>('users');
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
@@ -117,10 +106,6 @@ export const AdminProvisioning: React.FC = () => {
   const [newIpOrg, setNewIpOrg] = useState('');
   const [newIpDesc, setNewIpDesc] = useState('');
   const [addingIp, setAddingIp] = useState(false);
-
-  // Trusted Devices states
-  const [trustedDevices, setTrustedDevices] = useState<TrustedDeviceItem[]>([]);
-  const [loadingDevices, setLoadingDevices] = useState(false);
 
   // Request logs states
   const [requestLogs, setRequestLogs] = useState<RequestLogItem[]>([]);
@@ -159,20 +144,6 @@ export const AdminProvisioning: React.FC = () => {
       addToast('error', `Failed to load IP whitelist: ${err.message}`);
     } finally {
       setLoadingWhitelist(false);
-    }
-  };
-
-  // Fetch Trusted Devices
-  const fetchTrustedDevices = async () => {
-    setLoadingDevices(true);
-    try {
-      const response = await apiClient.get('/security/trusted-devices');
-      const parsedData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-      setTrustedDevices(parsedData);
-    } catch (err: any) {
-      addToast('error', `Failed to load trusted devices: ${err.message}`);
-    } finally {
-      setLoadingDevices(false);
     }
   };
 
@@ -215,7 +186,6 @@ export const AdminProvisioning: React.FC = () => {
     else if (activeTab === 'whitelist') fetchWhitelist();
     else if (activeTab === 'requests') fetchRequestLogs();
     else if (activeTab === 'security') fetchSecurityStats();
-    else if (activeTab === 'devices') fetchTrustedDevices();
   }, [activeTab]);
 
   // User Provisioning Actions
@@ -351,16 +321,6 @@ export const AdminProvisioning: React.FC = () => {
     }
   };
 
-  const handleApproveDevice = async (deviceId: string) => {
-    try {
-      await apiClient.put(`/security/trusted-devices/${deviceId}/approve`);
-      addToast('success', 'Successfully approved trusted device!');
-      fetchTrustedDevices();
-    } catch (err: any) {
-      addToast('error', `Failed to approve device: ${err.message}`);
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* HEADER */}
@@ -408,14 +368,6 @@ export const AdminProvisioning: React.FC = () => {
             }`}
           >
             Security Console
-          </button>
-          <button
-            onClick={() => setActiveTab('devices')}
-            className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition-all ${
-              activeTab === 'devices' ? 'bg-cyan-950/40 text-cyan-400 border border-cyan-800/30' : 'text-zinc-500 hover:text-zinc-350'
-            }`}
-          >
-            Trusted Devices
           </button>
         </div>
       </div>
@@ -759,89 +711,6 @@ export const AdminProvisioning: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* ==================== TAB 5: TRUSTED DEVICES ==================== */}
-      {activeTab === 'devices' && (
-        <div className="glass-card rounded-xl p-6 border-zinc-800/80 bg-zinc-950/40 space-y-4 animate-fade-in">
-          <div className="border-b border-zinc-900 pb-2 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Lock size={16} className="text-cyan-400" />
-              <h2 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-200">Registered Devices</h2>
-            </div>
-            <button
-              onClick={fetchTrustedDevices}
-              disabled={loadingDevices}
-              className="border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-850 text-zinc-300 rounded px-2.5 py-1 text-[9px] cursor-pointer transition-colors font-mono flex items-center gap-1"
-            >
-              <RotateCw size={10} className={loadingDevices ? 'animate-spin' : ''} />
-              <span>Refresh Devices</span>
-            </button>
-          </div>
-
-          {loadingDevices && trustedDevices.length === 0 ? (
-            <div className="text-zinc-650 text-xs font-mono py-16 text-center flex items-center justify-center gap-2">
-              <RotateCw className="animate-spin text-zinc-650" size={14} />
-              Scanning device registry...
-            </div>
-          ) : trustedDevices.length === 0 ? (
-            <div className="text-zinc-550 text-xs py-16 text-center font-sans border border-dashed border-zinc-900 rounded-xl">
-              No devices registered yet. Users logging in from dynamic IPs will appear here.
-            </div>
-          ) : (
-            <div className="overflow-x-auto border border-zinc-900 rounded-xl bg-zinc-900/10">
-              <table className="w-full text-left border-collapse font-mono text-[11px]">
-                <thead>
-                  <tr className="bg-zinc-900/30 border-b border-zinc-900 text-zinc-550 uppercase tracking-wider text-[8px]">
-                    <th className="px-4.5 py-2.5">User ID</th>
-                    <th className="px-4.5 py-2.5">Device Identifier</th>
-                    <th className="px-4.5 py-2.5">Last Login IP</th>
-                    <th className="px-4.5 py-2.5">Last Login Time</th>
-                    <th className="px-4.5 py-2.5 text-center">Status</th>
-                    <th className="px-4.5 py-2.5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-900/50">
-                  {trustedDevices.map((device) => (
-                    <tr key={device.id} className="hover:bg-zinc-900/20">
-                      <td className="px-4.5 py-3 font-bold text-zinc-200 truncate max-w-[120px]" title={device.user_id}>
-                        {device.user_id}
-                      </td>
-                      <td className="px-4.5 py-3 text-zinc-400">
-                        <div className="font-bold">{device.device_id.substring(0, 12)}...</div>
-                        <div className="text-[9px] text-zinc-550">{device.fingerprint}</div>
-                      </td>
-                      <td className="px-4.5 py-3 text-zinc-450">{device.last_ip || '-'}</td>
-                      <td className="px-4.5 py-3 text-zinc-550">
-                        {device.last_login_time ? new Date(device.last_login_time).toLocaleString() : 'Never'}
-                      </td>
-                      <td className="px-4.5 py-3 text-center">
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${
-                          device.is_approved 
-                            ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/30' 
-                            : 'bg-amber-950/20 text-amber-400 border border-amber-900/30 animate-pulse'
-                        }`}>
-                          {device.is_approved ? 'APPROVED' : 'PENDING'}
-                        </span>
-                      </td>
-                      <td className="px-4.5 py-3 text-right">
-                        {!device.is_approved && (
-                          <button
-                            onClick={() => handleApproveDevice(device.id)}
-                            className="bg-emerald-950/40 text-emerald-500 border border-emerald-900/30 hover:bg-emerald-900/20 p-1 rounded cursor-pointer transition-colors"
-                            title="Approve Device"
-                          >
-                            <CheckCircle size={12} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       )}
 

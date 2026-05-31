@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from typing import List, Optional
 from app.database.db import get_db
-from app.database.models import User, AdminAccessKey, AuditLog, TrustedDevice
+from app.database.models import User, AdminAccessKey, AuditLog
 from app.auth.jwt_handler import create_access_token
 from app.auth.role_manager import Role
 from app.auth.auth_middleware import require_role, require_roles
@@ -30,8 +30,6 @@ class SignupResponse(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
-    device_id: Optional[str] = None
-    browser_fingerprint: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -120,48 +118,6 @@ async def log_admin_action(db: AsyncSession, username: str, role: str, action: s
         ip_address=ip_address
     )
     db.add(audit)
-    await db.commit()
-
-# Device Registration Helper
-async def register_or_update_device(db: AsyncSession, user_id, device_id: str, fingerprint: str, ip_address: str):
-    if not device_id:
-        return
-    stmt = select(TrustedDevice).where(TrustedDevice.device_id == device_id)
-    res = await db.execute(stmt)
-    device = res.scalar_one_or_none()
-    
-    if device:
-        if device.last_ip != ip_address:
-            # IP Changed - Log it
-            audit = AuditLog(
-                username=str(user_id),
-                role="SYSTEM",
-                action="DYNAMIC_IP_CHANGE",
-                details=f"Trusted device {device_id} changed IP from {device.last_ip} to {ip_address}",
-                ip_address=ip_address
-            )
-            db.add(audit)
-        device.last_ip = ip_address
-        device.last_login_time = datetime.now(timezone.utc)
-    else:
-        # Register new device
-        new_device = TrustedDevice(
-            user_id=user_id,
-            device_id=device_id,
-            fingerprint=fingerprint or "Unknown",
-            last_ip=ip_address,
-            last_login_time=datetime.now(timezone.utc),
-            is_approved=False
-        )
-        db.add(new_device)
-        audit = AuditLog(
-            username=str(user_id),
-            role="SYSTEM",
-            action="NEW_DEVICE_REGISTERED",
-            details=f"New device {device_id} registered from IP {ip_address} and awaits approval.",
-            ip_address=ip_address
-        )
-        db.add(audit)
     await db.commit()
 
 # --- Public Client Onboarding Routes ---
@@ -283,9 +239,6 @@ async def client_login(payload: LoginRequest, req_obj: Request, db: AsyncSession
         req_obj
     )
 
-    client_ip = req_obj.headers.get("x-forwarded-for", "").split(",")[0].strip() or (req_obj.client.host if req_obj.client else "unknown")
-    await register_or_update_device(db, user.id, payload.device_id, payload.browser_fingerprint, client_ip)
-
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -295,7 +248,7 @@ async def client_login(payload: LoginRequest, req_obj: Request, db: AsyncSession
 # --- Separate Admin/Operational Authentication ---
 
 @router.post("/admin/login", response_model=TokenResponse)
-async def admin_login(payload: LoginRequest, req_obj: Request, db: AsyncSession = Depends(get_db)):
+async def admin_login(payload: AdminTokenRequest, req_obj: Request, db: AsyncSession = Depends(get_db)):
     """
     Dedicated Admin Login portal requiring username/email and password.
     """
@@ -360,6 +313,25 @@ async def admin_login(payload: LoginRequest, req_obj: Request, db: AsyncSession 
             detail="Invalid credentials. Verify username/email and password."
         )
 
+    # Verify Admin Access Key
+    key_stmt = select(AdminAccessKey).where(
+        (AdminAccessKey.user_id == user.id) & 
+        (AdminAccessKey.is_active == True)
+    )
+    key_res = await db.execute(key_stmt)
+    valid_key = False
+    for k in key_res.scalars():
+        if verify_password(payload.admin_access_key, k.key_hash):
+            valid_key = True
+            break
+            
+    if not valid_key:
+        await log_admin_action(db, user.username, user.role, "ADMIN_LOGIN_FAILED", "Invalid admin access key", req_obj)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing admin access key."
+        )
+
     # Create Access Token
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role},
@@ -368,9 +340,6 @@ async def admin_login(payload: LoginRequest, req_obj: Request, db: AsyncSession 
 
     # Log login success
     await log_admin_action(db, user.username, user.role, "ADMIN_LOGIN_SUCCESS", "Admin logged in successfully", req_obj)
-    
-    client_ip = req_obj.headers.get("x-forwarded-for", "").split(",")[0].strip() or (req_obj.client.host if req_obj.client else "unknown")
-    await register_or_update_device(db, user.id, payload.device_id, payload.browser_fingerprint, client_ip)
 
     return {
         "access_token": access_token,

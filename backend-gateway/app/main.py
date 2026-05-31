@@ -524,6 +524,23 @@ def custom_openapi():
         }
         schemas["FavoriteBillerAddRequest"]["required"] = ["billerid"]
 
+    # 4. Inject X-Forwarded-For into all non-public paths to spoof client IP in Swagger
+    for path, path_item in openapi_schema.get("paths", {}).items():
+        if path not in ("/health", "/heartbeat", "/", "/docs", "/openapi.json"):
+            for method, operation in path_item.items():
+                if isinstance(operation, dict):
+                    if "parameters" not in operation:
+                        operation["parameters"] = []
+                    has_ip = any(p.get("name", "").lower() == "x-forwarded-for" for p in operation["parameters"])
+                    if not has_ip:
+                        operation["parameters"].append({
+                            "name": "X-Forwarded-For",
+                            "in": "header",
+                            "required": False,
+                            "description": "Spoof Client IP for IP Whitelist testing (e.g., 206.1.1.1)",
+                            "schema": {"type": "string"}
+                        })
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 

@@ -33,18 +33,7 @@ class IPWhitelistResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class TrustedDeviceResponse(BaseModel):
-    id: str
-    user_id: str
-    device_id: str
-    fingerprint: Optional[str] = None
-    last_ip: Optional[str] = None
-    last_login_time: Optional[datetime] = None
-    is_approved: bool
-    created_at: datetime
 
-    class Config:
-        from_attributes = True
 
 class RequestLogResponse(BaseModel):
     id: str
@@ -186,56 +175,7 @@ async def delete_ip_whitelist(
     )
     return {"success": True, "message": f"IP {ip} removed from whitelist"}
 
-# --- Trusted Device Operations ---
 
-@router.get("/security/trusted-devices", response_model=List[TrustedDeviceResponse], tags=["Trusted Devices"])
-async def get_trusted_devices(
-    db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_roles([Role.ADMIN, Role.SUPER_ADMIN]))
-):
-    from app.database.models import TrustedDevice
-    stmt = select(TrustedDevice).order_by(TrustedDevice.created_at.desc())
-    res = await db.execute(stmt)
-    devices = res.scalars().all()
-    return [
-        TrustedDeviceResponse(
-            id=str(d.id),
-            user_id=str(d.user_id),
-            device_id=d.device_id,
-            fingerprint=d.fingerprint,
-            last_ip=d.last_ip,
-            last_login_time=d.last_login_time,
-            is_approved=d.is_approved,
-            created_at=d.created_at
-        ) for d in devices
-    ]
-
-@router.put("/security/trusted-devices/{device_id}/approve", tags=["Trusted Devices"])
-async def approve_trusted_device(
-    device_id: str,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_roles([Role.ADMIN, Role.SUPER_ADMIN]))
-):
-    from app.database.models import TrustedDevice
-    stmt = select(TrustedDevice).where(TrustedDevice.id == device_id)
-    res = await db.execute(stmt)
-    device = res.scalar_one_or_none()
-    if not device:
-        raise HTTPException(status_code=404, detail="Device not found")
-        
-    device.is_approved = True
-    await db.commit()
-    
-    await log_admin_action(
-        db,
-        user["username"],
-        user["role"],
-        "DEVICE_APPROVED",
-        f"Approved trusted device: {device.device_id} for user {device.user_id}",
-        request
-    )
-    return {"success": True, "message": "Device approved successfully"}
 
 # --- Request Monitoring Dashboard (Restricted to ADMIN / SUPER_ADMIN) ---
 

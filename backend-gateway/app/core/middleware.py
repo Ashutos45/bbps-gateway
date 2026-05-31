@@ -387,7 +387,7 @@ class IPWhitelistingMiddleware(BaseHTTPMiddleware):
         is_bypass = False
         if path_lower in ("/health", "/heartbeat", "/"):
             is_bypass = True
-        elif path_lower.startswith(("/docs", "/redoc", "/openapi.json", "/static", "/favicon.ico", "/auth/")):
+        elif path_lower.startswith(("/docs", "/redoc", "/openapi.json", "/static", "/favicon.ico")):
             is_bypass = True
         elif path_lower == "/reports" and request.method == "GET":
             is_bypass = True
@@ -415,10 +415,7 @@ class IPWhitelistingMiddleware(BaseHTTPMiddleware):
         if is_private_ip(client_ip):
             return await call_next(request)
 
-        # 4. If an Authorization header is present, defer to the authentication/JWT layer.
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            return await call_next(request)
+
 
         # 5. Check database whitelist with CIDR support
         import ipaddress
