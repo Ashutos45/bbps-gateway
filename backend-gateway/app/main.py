@@ -48,19 +48,25 @@ async def initialize_database():
         logger.info("Creating database tables if they don't exist...")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            
+        migrations = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS organization VARCHAR(100);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company VARCHAR(100);",
+            "UPDATE users SET role = 'OPERATIONS' WHERE role = 'OPERATOR';",
+            "ALTER TABLE admin_access_keys ALTER COLUMN user_id DROP NOT NULL;",
+            "ALTER TABLE admin_access_keys ADD COLUMN IF NOT EXISTS role VARCHAR(30);",
+            "ALTER TABLE ip_whitelist ADD COLUMN IF NOT EXISTS is_cidr BOOLEAN NOT NULL DEFAULT FALSE;",
+            "ALTER TABLE ip_whitelist ADD COLUMN IF NOT EXISTS organization_id VARCHAR(100);"
+        ]
+        
+        for mig in migrations:
             try:
-                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;"))
-                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS organization VARCHAR(100);"))
-                await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS company VARCHAR(100);"))
-                await conn.execute(text("UPDATE users SET role = 'OPERATIONS' WHERE role = 'OPERATOR';"))
-                await conn.execute(text("ALTER TABLE admin_access_keys ALTER COLUMN user_id DROP NOT NULL;"))
-                await conn.execute(text("ALTER TABLE admin_access_keys ADD COLUMN IF NOT EXISTS role VARCHAR(30);"))
-                
-                # Dynamic Access IP Whitelist Migrations
-                await conn.execute(text("ALTER TABLE ip_whitelist ADD COLUMN IF NOT EXISTS is_cidr BOOLEAN NOT NULL DEFAULT FALSE;"))
-                await conn.execute(text("ALTER TABLE ip_whitelist ADD COLUMN IF NOT EXISTS organization_id VARCHAR(100);"))
+                async with engine.begin() as conn:
+                    await conn.execute(text(mig))
             except Exception as e:
-                logger.warning(f"Note on migration execution: {e}")
+                logger.warning(f"Migration step failed (safe to ignore if already applied): {mig} -> {e}")
+                
         logger.info("Database tables initialized successfully.")
         
         # Check if billers already exist

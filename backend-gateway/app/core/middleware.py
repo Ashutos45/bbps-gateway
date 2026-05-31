@@ -387,7 +387,7 @@ class IPWhitelistingMiddleware(BaseHTTPMiddleware):
         is_bypass = False
         if path_lower in ("/health", "/heartbeat", "/"):
             is_bypass = True
-        elif path_lower.startswith(("/docs", "/redoc", "/openapi.json", "/static", "/favicon.ico")):
+        elif path_lower.startswith(("/docs", "/redoc", "/openapi.json", "/static", "/favicon.ico", "/auth/")):
             is_bypass = True
         elif path_lower == "/reports" and request.method == "GET":
             is_bypass = True
