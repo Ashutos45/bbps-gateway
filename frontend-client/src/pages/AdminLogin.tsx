@@ -7,6 +7,7 @@ import { Lock, User, ShieldAlert, Loader2, Server } from 'lucide-react';
 export const AdminLogin: React.FC = () => {
   const [username, setUsernameInput] = useState('');
   const [password, setPassword] = useState('');
+  const [adminAccessKey, setAdminAccessKeyInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -27,6 +28,7 @@ export const AdminLogin: React.FC = () => {
       const response = await apiClient.post('/auth/admin/login', {
         username: username.trim(),
         password,
+        admin_access_key: adminAccessKey.trim(),
       });
 
       const data = response.data;
@@ -128,6 +130,26 @@ export const AdminLogin: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
+                className="input-premium pl-10 text-xs"
+                disabled={loading}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col space-y-1.5">
+            <label className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">
+              Admin Access Key
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-zinc-500">
+                <ShieldAlert size={15} />
+              </span>
+              <input
+                type="password"
+                value={adminAccessKey}
+                onChange={(e) => setAdminAccessKeyInput(e.target.value)}
+                placeholder="Secure access token"
                 className="input-premium pl-10 text-xs"
                 disabled={loading}
                 required
