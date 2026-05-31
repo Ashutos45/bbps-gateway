@@ -524,22 +524,31 @@ def custom_openapi():
         }
         schemas["FavoriteBillerAddRequest"]["required"] = ["billerid"]
 
-    # 4. Inject X-Client-IP into all non-public paths to spoof client IP in Swagger
+    # 4. Global Client IP testing in Authorize dialog
+    if "components" not in openapi_schema:
+        openapi_schema["components"] = {}
+    if "securitySchemes" not in openapi_schema["components"]:
+        openapi_schema["components"]["securitySchemes"] = {}
+        
+    openapi_schema["components"]["securitySchemes"]["ClientIP"] = {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Forwarded-For",
+        "description": "Global Testing IP for IP Whitelist (e.g., 192.168.29.131)"
+    }
+
     for path, path_item in openapi_schema.get("paths", {}).items():
         if path not in ("/health", "/heartbeat", "/", "/docs", "/openapi.json"):
             for method, operation in path_item.items():
                 if isinstance(operation, dict):
-                    if "parameters" not in operation:
-                        operation["parameters"] = []
-                    has_ip = any(p.get("name", "").lower() == "x-client-ip" for p in operation["parameters"])
-                    if not has_ip:
-                        operation["parameters"].append({
-                            "name": "X-Client-IP",
-                            "in": "header",
-                            "required": False,
-                            "description": "Spoof Client IP for IP Whitelist testing (e.g., 206.1.1.1)",
-                            "schema": {"type": "string"}
-                        })
+                    if "security" not in operation:
+                        operation["security"] = []
+                    
+                    if len(operation["security"]) > 0:
+                        for req in operation["security"]:
+                            req["ClientIP"] = []
+                    else:
+                        operation["security"].append({"ClientIP": []})
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
