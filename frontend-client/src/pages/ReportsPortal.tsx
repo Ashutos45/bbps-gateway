@@ -140,9 +140,9 @@ export const ReportsPortal: React.FC = () => {
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-cyan-400 font-mono pt-1">
             <span>Decryption Keys for Seeding:</span>
-            <span>AUDIT -> <code className="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">AUDIT_KEY_123</code></span>
-            <span>TRANSACTION -> <code className="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">OPER_KEY_123</code></span>
-            <span>SECURITY -> <code className="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">ADMIN_KEY_123</code></span>
+            <span>AUDIT -{'>'} <code className="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">AUDIT_KEY_123</code></span>
+            <span>TRANSACTION -{'>'} <code className="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">OPER_KEY_123</code></span>
+            <span>SECURITY -{'>'} <code className="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">ADMIN_KEY_123</code></span>
           </div>
         </div>
       </div>

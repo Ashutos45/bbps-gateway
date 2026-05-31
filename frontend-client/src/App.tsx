@@ -14,7 +14,8 @@ import {
   Radio,
   User,
   Layers,
-  Settings
+  Settings,
+  Lock
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import BillPayment from './pages/BillPayment';
