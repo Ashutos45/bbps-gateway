@@ -415,13 +415,38 @@ class IPWhitelistingMiddleware(BaseHTTPMiddleware):
         if is_private_ip(client_ip):
             return await call_next(request)
 
-        # 4. Check database whitelist
-        async with AsyncSessionLocal() as session:
-            stmt = select(IPWhitelist).where(IPWhitelist.ip_address == client_ip)
-            res = await session.execute(stmt)
-            db_whitelist_entry = res.scalar_one_or_none()
+        # 4. If an Authorization header is present, defer to the authentication/JWT layer.
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            return await call_next(request)
 
-        if not db_whitelist_entry:
+        # 5. Check database whitelist with CIDR support
+        import ipaddress
+        allowed = False
+        async with AsyncSessionLocal() as session:
+            stmt = select(IPWhitelist)
+            res = await session.execute(stmt)
+            all_whitelists = res.scalars().all()
+
+            try:
+                client_ip_obj = ipaddress.ip_address(client_ip)
+                for entry in all_whitelists:
+                    if entry.is_cidr:
+                        try:
+                            net = ipaddress.ip_network(entry.ip_address, strict=False)
+                            if client_ip_obj in net:
+                                allowed = True
+                                break
+                        except ValueError:
+                            pass
+                    else:
+                        if entry.ip_address == client_ip:
+                            allowed = True
+                            break
+            except ValueError:
+                pass # Invalid client IP format
+
+        if not allowed:
             # Blocked IP attempt! Log it and return 403.
             trace_id = request.headers.get("x-trace-id") or request.headers.get("X-Trace-Id") or "trace-not-found"
             logger.warning(f"Blocked unauthorized IP access: {client_ip} on path {path} (Trace: {trace_id})")

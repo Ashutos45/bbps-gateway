@@ -17,13 +17,30 @@ router = APIRouter()
 # Pydantic Schemas
 class IPWhitelistCreate(BaseModel):
     ip_address: str
+    is_cidr: bool = False
+    organization_id: Optional[str] = None
     description: Optional[str] = None
 
 class IPWhitelistResponse(BaseModel):
     id: str
     ip_address: str
+    is_cidr: bool = False
+    organization_id: Optional[str] = None
     description: Optional[str] = None
     added_by: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class TrustedDeviceResponse(BaseModel):
+    id: str
+    user_id: str
+    device_id: str
+    fingerprint: Optional[str] = None
+    last_ip: Optional[str] = None
+    last_login_time: Optional[datetime] = None
+    is_approved: bool
     created_at: datetime
 
     class Config:
@@ -92,6 +109,8 @@ async def get_ip_whitelist(
         IPWhitelistResponse(
             id=str(e.id),
             ip_address=e.ip_address,
+            is_cidr=e.is_cidr,
+            organization_id=e.organization_id,
             description=e.description,
             added_by=e.added_by,
             created_at=e.created_at
@@ -119,6 +138,8 @@ async def add_ip_whitelist(
         
     entry = IPWhitelist(
         ip_address=ip_clean,
+        is_cidr=payload.is_cidr,
+        organization_id=payload.organization_id,
         description=payload.description or "Manual entry",
         added_by=user["username"]
     )
@@ -136,7 +157,7 @@ async def add_ip_whitelist(
     )
     return entry
 
-@router.delete("/security/ip-whitelist/{ip}", tags=["IP Whitelist"])
+@router.delete("/security/ip-whitelist/{ip:path}", tags=["IP Whitelist"])
 async def delete_ip_whitelist(
     ip: str,
     request: Request,
@@ -164,6 +185,57 @@ async def delete_ip_whitelist(
         request
     )
     return {"success": True, "message": f"IP {ip} removed from whitelist"}
+
+# --- Trusted Device Operations ---
+
+@router.get("/security/trusted-devices", response_model=List[TrustedDeviceResponse], tags=["Trusted Devices"])
+async def get_trusted_devices(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_roles([Role.ADMIN, Role.SUPER_ADMIN]))
+):
+    from app.database.models import TrustedDevice
+    stmt = select(TrustedDevice).order_by(TrustedDevice.created_at.desc())
+    res = await db.execute(stmt)
+    devices = res.scalars().all()
+    return [
+        TrustedDeviceResponse(
+            id=str(d.id),
+            user_id=str(d.user_id),
+            device_id=d.device_id,
+            fingerprint=d.fingerprint,
+            last_ip=d.last_ip,
+            last_login_time=d.last_login_time,
+            is_approved=d.is_approved,
+            created_at=d.created_at
+        ) for d in devices
+    ]
+
+@router.put("/security/trusted-devices/{device_id}/approve", tags=["Trusted Devices"])
+async def approve_trusted_device(
+    device_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_roles([Role.ADMIN, Role.SUPER_ADMIN]))
+):
+    from app.database.models import TrustedDevice
+    stmt = select(TrustedDevice).where(TrustedDevice.id == device_id)
+    res = await db.execute(stmt)
+    device = res.scalar_one_or_none()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+        
+    device.is_approved = True
+    await db.commit()
+    
+    await log_admin_action(
+        db,
+        user["username"],
+        user["role"],
+        "DEVICE_APPROVED",
+        f"Approved trusted device: {device.device_id} for user {device.user_id}",
+        request
+    )
+    return {"success": True, "message": "Device approved successfully"}
 
 # --- Request Monitoring Dashboard (Restricted to ADMIN / SUPER_ADMIN) ---
 
