@@ -115,5 +115,42 @@ class AuditLog(Base):
     action = Column(String(100), nullable=False)
     details = Column(String(500), nullable=True)
     ip_address = Column(String(50), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+
+class IPWhitelist(Base):
+    __tablename__ = "ip_whitelist"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    ip_address = Column(String(50), unique=True, index=True, nullable=False)
+    description = Column(String(255), nullable=True)
+    added_by = Column(String(50), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class GatewayRequestLog(Base):
+    __tablename__ = "gateway_request_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_id = Column(String(50), unique=True, index=True, nullable=False)
+    client_user = Column(String(100), nullable=True)
+    source_ip = Column(String(50), nullable=True)
+    endpoint = Column(String(255), nullable=False)
+    request_status = Column(String(30), nullable=False)  # SUCCESS, FAILED, BLOCKED, TAMPERED, REPLAY_ATTACK
+    response_code = Column(Integer, nullable=True)
+    processing_time_ms = Column(Numeric(10, 2), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title = Column(String(100), nullable=False)
+    report_type = Column(String(50), nullable=False)  # TRANSACTION, AUDIT, SECURITY
+    owner_role = Column(String(30), nullable=False)
+    encrypted_content = Column(String, nullable=False)
+    key_hash = Column(String(255), nullable=False)  # bcrypt hash of the decryption key
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
 

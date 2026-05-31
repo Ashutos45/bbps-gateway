@@ -30,6 +30,30 @@ def record_security_metric(metric_name: str) -> None:
   elif metric_name == "download_audit":
     TelemetryService.record_download_audit()
 
+async def log_failed_auth(request: Request, username: str, role: str, action: str, details: str):
+  from app.database.db import AsyncSessionLocal
+  from app.database.models import AuditLog
+  
+  x_forwarded_for = request.headers.get("x-forwarded-for")
+  if x_forwarded_for:
+      ip = x_forwarded_for.split(",")[0].strip()
+  else:
+      ip = request.client.host if request and request.client else None
+      
+  try:
+      async with AsyncSessionLocal() as session:
+          audit = AuditLog(
+              username=username,
+              role=role,
+              action=action,
+              details=details,
+              ip_address=ip
+          )
+          session.add(audit)
+          await session.commit()
+  except Exception as e:
+      logger.error(f"Failed to log failed authorization: {e}")
+
 async def get_current_user(
   request: Request,
   credentials: Optional[HTTPAuthorizationCredentials] = Depends(reusable_oauth2)
@@ -55,6 +79,7 @@ async def get_current_user(
     else:
       logger.warning("Invalid API key provided.")
       record_security_metric("unauthorized")
+      await log_failed_auth(request, "UNKNOWN", "UNKNOWN", "FAILED_AUTH_API_KEY", f"Invalid API Key attempt: {api_key[:10]}...")
       raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Unauthorized: Invalid API Key"
@@ -87,6 +112,7 @@ async def get_current_user(
     except jwt.ExpiredSignatureError:
       logger.warning("Expired JWT signature detected.")
       record_security_metric("jwt_fail")
+      await log_failed_auth(request, "UNKNOWN", "UNKNOWN", "FAILED_AUTH_JWT_EXPIRED", "Token signature has expired")
       raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Unauthorized: Token has expired"
@@ -94,6 +120,7 @@ async def get_current_user(
     except jwt.PyJWTError as err:
       logger.warning(f"JWT decode failure: {err}")
       record_security_metric("jwt_fail")
+      await log_failed_auth(request, "UNKNOWN", "UNKNOWN", "FAILED_AUTH_JWT_INVALID", f"JWT decoding failure: {err}")
       raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Unauthorized: Invalid JWT Token"
@@ -115,6 +142,7 @@ async def get_current_user(
 
   logger.warning("Authentication credentials missing.")
   record_security_metric("unauthorized")
+  await log_failed_auth(request, "UNKNOWN", "UNKNOWN", "FAILED_AUTH_MISSING", "Authentication credentials missing (JWT or API Key required)")
   raise HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Unauthorized: Authentication credentials missing (JWT or API Key required)"
@@ -128,7 +156,7 @@ class require_role:
   def __init__(self, allowed_roles: List[str]):
     self.allowed_roles = allowed_roles
 
-  def __call__(self, user: dict = Depends(get_current_user)):
+  def __call__(self, request: Request, user: dict = Depends(get_current_user)):
     user_role = user.get("role")
     
     # 1. Super Admin bypasses all checks
@@ -146,12 +174,23 @@ class require_role:
     if not is_authorized:
       logger.warning(f"Role authorization check failed. User: {user['username']}, Role: {user_role}. Required: {self.allowed_roles}")
       record_security_metric("unauthorized")
+      
+      import asyncio
+      asyncio.create_task(log_failed_auth(
+          request,
+          user["username"],
+          user_role,
+          "FAILED_AUTH_FORBIDDEN",
+          f"Insufficient permissions. Role '{user_role}' lacks access to path '{request.url.path}'. Required: {self.allowed_roles}"
+      ))
+      
       raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail=f"Forbidden: Insufficient permissions (Role '{user_role}' lacks access)"
       )
       
     return user
+
 
 
 class require_roles:
@@ -161,10 +200,10 @@ class require_roles:
   def __init__(self, allowed_roles: List[str]):
     self.allowed_roles = allowed_roles
 
-  def __call__(self, user: dict = Depends(get_current_user)):
+  def __call__(self, request: Request, user: dict = Depends(get_current_user)):
     # Simply reuse the require_role logic
     checker = require_role(self.allowed_roles)
-    return checker(user)
+    return checker(request, user)
 
 
 async def get_hmac_headers(

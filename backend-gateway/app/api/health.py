@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -12,3 +13,16 @@ async def health_check():
         "status": "success",
         "message": "BBPS COU System Running"
     }
+
+@router.get("/heartbeat", tags=["Health"])
+async def heartbeat_check():
+    """
+    Heartbeat service confirming the BBPS Gateway is alive.
+    No authentication required.
+    """
+    return {
+        "status": "alive",
+        "service": "BBPS Gateway",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+

@@ -22,7 +22,8 @@ from app.api.download_router import router as download_router
 from app.api.stream_router import router as stream_router
 from app.api.demo_router import router as demo_router, router_root as demo_root_router
 from app.api.hmac_probe_router import router as hmac_probe_router
-from app.core.middleware import HMACSecurityMiddleware, IPWhitelistingMiddleware, GatewayRoutingMiddleware
+from app.api.security import router as security_router
+from app.core.middleware import HMACSecurityMiddleware, IPWhitelistingMiddleware, GatewayRoutingMiddleware, GatewayRequestLoggingMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from app.workers.reconciliation_worker import ReconciliationWorker
 from app.workers.ambiguous_state_worker import AmbiguousStateWorker
@@ -225,6 +226,82 @@ async def initialize_database():
                         
             await session.commit()
             logger.info("Default users and keys seeding completed successfully.")
+
+        # Seed IP Whitelist defaults
+        async with AsyncSessionLocal() as session:
+            from app.database.models import IPWhitelist
+            ip_stmt = select(func.count(IPWhitelist.id))
+            ip_res = await session.execute(ip_stmt)
+            ip_count = ip_res.scalar() or 0
+            if ip_count == 0:
+                logger.info("Seeding default whitelisted IPs...")
+                default_ips = [
+                    {"ip_address": "127.0.0.1", "description": "Localhost IPv4 loopback"},
+                    {"ip_address": "localhost", "description": "Localhost name"},
+                    {"ip_address": "::1", "description": "Localhost IPv6 loopback"},
+                    {"ip_address": "testclient", "description": "Test client bypass"},
+                    {"ip_address": "206.1.1.1", "description": "Sample Whitelisted IP 1"},
+                    {"ip_address": "206.1.1.2", "description": "Sample Whitelisted IP 2"},
+                    {"ip_address": "206.1.1.3", "description": "Sample Whitelisted IP 3"}
+                ]
+                for ip_data in default_ips:
+                    entry = IPWhitelist(
+                        id=uuid.uuid4(),
+                        ip_address=ip_data["ip_address"],
+                        description=ip_data["description"],
+                        added_by="SYSTEM"
+                    )
+                    session.add(entry)
+                await session.commit()
+                logger.info("Default IP whitelist seeded successfully.")
+
+        # Seed Reports defaults
+        async with AsyncSessionLocal() as session:
+            from app.database.models import Report
+            from app.utils.encryption import encrypt_data
+            
+            report_stmt = select(func.count(Report.id))
+            report_res = await session.execute(report_stmt)
+            report_count = report_res.scalar() or 0
+            if report_count == 0:
+                logger.info("Seeding default encrypted reports...")
+                default_reports = [
+                    {
+                        "title": "Q1 Security Compliance Report",
+                        "report_type": "AUDIT",
+                        "owner_role": Role.AUDITOR,
+                        "content": "This is the Q1 BBPS Security Compliance report. System successfully verified zero signature compromises and complete access logs alignment with regulatory mandates.",
+                        "key": "AUDIT_KEY_123"
+                    },
+                    {
+                        "title": "Monthly Billing & Clearing Summary",
+                        "report_type": "TRANSACTION",
+                        "owner_role": Role.OPERATIONS,
+                        "content": "BBPS Clearing summary: Total processed transactions: 15,200. Total value cleared: ₹3,14,50,000.00. Network success rate: 99.82%. No pending reconciliation version conflicts.",
+                        "key": "OPER_KEY_123"
+                    },
+                    {
+                        "title": "Gateway Penetration Test Analysis",
+                        "report_type": "SECURITY",
+                        "owner_role": Role.ADMIN,
+                        "content": "Gateway penetration test report. Zero high/critical issues found. Nonce validation blocks replay attempts, and IP validation rejects unauthorized requests.",
+                        "key": "ADMIN_KEY_123"
+                    }
+                ]
+                for rep_data in default_reports:
+                    entry = Report(
+                        id=uuid.uuid4(),
+                        title=rep_data["title"],
+                        report_type=rep_data["report_type"],
+                        owner_role=rep_data["owner_role"],
+                        encrypted_content=encrypt_data(rep_data["content"], rep_data["key"]),
+                        key_hash=get_password_hash(rep_data["key"]),
+                        created_at=datetime.now(timezone.utc)
+                    )
+                    session.add(entry)
+                await session.commit()
+                logger.info("Default reports seeded successfully.")
+
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
 
@@ -301,10 +378,11 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
-# Register middleware (executed in reverse order: IPWhitelisting -> GatewayRouting -> HMACSecurity)
+# Register middleware (executed in reverse order: logging -> IPWhitelisting -> GatewayRouting -> HMACSecurity)
 app.add_middleware(HMACSecurityMiddleware)
 app.add_middleware(GatewayRoutingMiddleware)
 app.add_middleware(IPWhitelistingMiddleware)
+app.add_middleware(GatewayRequestLoggingMiddleware)
 
 # Custom Swagger UI route with sleek enterprise dark mode
 @app.get("/docs", include_in_schema=False)
@@ -373,6 +451,7 @@ app.include_router(oneview_router, prefix="/BOBCOU/BBPS", dependencies=[Depends(
 app.include_router(reconciliation_router, prefix="/BOBCOU/BBPS", dependencies=[Depends(require_roles([Role.OPERATIONS]))])
 app.include_router(telemetry_router, dependencies=[Depends(require_roles([Role.ADMIN]))])
 app.include_router(auth_router)
+app.include_router(security_router)
 app.include_router(download_router)
 app.include_router(demo_router)
 app.include_router(demo_root_router)

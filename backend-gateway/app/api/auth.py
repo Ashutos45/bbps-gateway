@@ -122,13 +122,15 @@ async def log_admin_action(db: AsyncSession, username: str, role: str, action: s
 
 # --- Public Client Onboarding Routes ---
 
+# --- Public Client Onboarding Routes ---
+
 @router.post("/register-client", response_model=SignupResponse)
-async def client_signup(request: ClientSignupRequest, db: AsyncSession = Depends(get_db)):
+async def client_signup(payload: ClientSignupRequest, req_obj: Request, db: AsyncSession = Depends(get_db)):
     """
     Public self-registration for standard CLIENT accounts.
     """
     # Check duplicate username
-    username_stmt = select(User).where(User.username == request.username)
+    username_stmt = select(User).where(User.username == payload.username)
     username_res = await db.execute(username_stmt)
     if username_res.scalar_one_or_none():
         raise HTTPException(
@@ -137,7 +139,7 @@ async def client_signup(request: ClientSignupRequest, db: AsyncSession = Depends
         )
 
     # Check duplicate email
-    email_stmt = select(User).where(User.email == request.email)
+    email_stmt = select(User).where(User.email == payload.email)
     email_res = await db.execute(email_stmt)
     if email_res.scalar_one_or_none():
         raise HTTPException(
@@ -145,18 +147,27 @@ async def client_signup(request: ClientSignupRequest, db: AsyncSession = Depends
             detail="Email already registered"
         )
 
-    hashed_password = get_password_hash(request.password)
+    hashed_password = get_password_hash(payload.password)
     new_user = User(
-        username=request.username,
-        email=request.email,
+        username=payload.username,
+        email=payload.email,
         hashed_password=hashed_password,
         role=Role.CLIENT,
         is_active=True,
-        organization=request.organization,
-        company=request.company
+        organization=payload.organization,
+        company=payload.company
     )
     db.add(new_user)
     await db.commit()
+
+    await log_admin_action(
+        db,
+        payload.username,
+        Role.CLIENT,
+        "CLIENT_REGISTERED",
+        f"Client self-registration successful for user: {payload.username}",
+        req_obj
+    )
 
     return {
         "success": True,
@@ -164,27 +175,51 @@ async def client_signup(request: ClientSignupRequest, db: AsyncSession = Depends
     }
 
 @router.post("/login-client", response_model=TokenResponse)
-async def client_login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def client_login(payload: LoginRequest, req_obj: Request, db: AsyncSession = Depends(get_db)):
     """
     Public standard login for CLIENT accounts.
     """
-    stmt = select(User).where(User.username == request.username)
+    stmt = select(User).where(User.username == payload.username)
     res = await db.execute(stmt)
     user = res.scalar_one_or_none()
 
-    if not user or not verify_password(request.password, user.hashed_password):
+    if not user or not verify_password(payload.password, user.hashed_password):
+        await log_admin_action(
+            db,
+            payload.username,
+            Role.CLIENT,
+            "CLIENT_LOGIN_FAILED",
+            f"Failed client login attempt (invalid credentials) for user: {payload.username}",
+            req_obj
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid credentials. Verify username and password."
         )
 
     if user.role != Role.CLIENT:
+        await log_admin_action(
+            db,
+            user.username,
+            user.role,
+            "CLIENT_LOGIN_FAILED",
+            f"Failed client login attempt: Administrative user '{user.username}' with role {user.role} attempted client login.",
+            req_obj
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Administrative accounts must authenticate using the Admin Login portal."
         )
 
     if not user.is_active:
+        await log_admin_action(
+            db,
+            user.username,
+            user.role,
+            "CLIENT_LOGIN_FAILED",
+            f"Failed client login attempt: Account is deactivated for user '{user.username}'.",
+            req_obj
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is deactivated. Contact administrator."
@@ -193,6 +228,15 @@ async def client_login(request: LoginRequest, db: AsyncSession = Depends(get_db)
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role},
         expires_delta=timedelta(minutes=60)
+    )
+
+    await log_admin_action(
+        db,
+        user.username,
+        user.role,
+        "CLIENT_LOGIN_SUCCESS",
+        f"Client user '{user.username}' logged in successfully",
+        req_obj
     )
 
     return {
@@ -204,34 +248,66 @@ async def client_login(request: LoginRequest, db: AsyncSession = Depends(get_db)
 # --- Separate Admin/Operational Authentication ---
 
 @router.post("/admin/login", response_model=TokenResponse)
-async def admin_login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def admin_login(payload: LoginRequest, req_obj: Request, db: AsyncSession = Depends(get_db)):
     """
     Dedicated Admin Login portal requiring username/email and password.
     """
     # 1. Lookup User (by username or email)
-    stmt = select(User).where((User.username == request.username) | (User.email == request.username))
+    stmt = select(User).where((User.username == payload.username) | (User.email == payload.username))
     res = await db.execute(stmt)
     user = res.scalar_one_or_none()
 
     if not user:
+        await log_admin_action(
+            db,
+            payload.username,
+            "UNKNOWN",
+            "ADMIN_LOGIN_FAILED",
+            f"Failed admin login attempt: Administrative user '{payload.username}' not found.",
+            req_obj
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid credentials. Verify username/email and password."
         )
 
     if user.role == Role.CLIENT:
+        await log_admin_action(
+            db,
+            user.username,
+            user.role,
+            "ADMIN_LOGIN_FAILED",
+            f"Failed admin login attempt: Client user '{user.username}' attempted administrative login.",
+            req_obj
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Client accounts must authenticate using the Client portal."
         )
 
     if not user.is_active:
+        await log_admin_action(
+            db,
+            user.username,
+            user.role,
+            "ADMIN_LOGIN_FAILED",
+            f"Failed admin login attempt: Deactivated admin user '{user.username}' attempted login.",
+            req_obj
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Administrative account is deactivated or not yet activated."
         )
 
-    if not verify_password(request.password, user.hashed_password):
+    if not verify_password(payload.password, user.hashed_password):
+        await log_admin_action(
+            db,
+            user.username,
+            user.role,
+            "ADMIN_LOGIN_FAILED",
+            f"Failed admin login attempt (invalid credentials) for user: {user.username}",
+            req_obj
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid credentials. Verify username/email and password."
@@ -244,13 +320,14 @@ async def admin_login(request: LoginRequest, db: AsyncSession = Depends(get_db))
     )
 
     # Log login success
-    await log_admin_action(db, user.username, user.role, "ADMIN_LOGIN", "Admin logged in successfully")
+    await log_admin_action(db, user.username, user.role, "ADMIN_LOGIN_SUCCESS", "Admin logged in successfully", req_obj)
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "role": user.role
     }
+
 
 @router.post("/admin/generate-key", response_model=StandaloneKeyResponse)
 async def generate_standalone_key(

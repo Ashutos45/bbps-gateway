@@ -29,6 +29,7 @@ import AdminProvisioning from './pages/AdminProvisioning';
 import SuperAdminConsole from './pages/SuperAdminConsole';
 import ActivateAdmin from './pages/ActivateAdmin';
 import AdminLogin from './pages/AdminLogin';
+import ReportsPortal from './pages/ReportsPortal';
 import { ToastManager } from './components/ToastManager';
 import { useAuthStore } from './state/authStore';
 import { useToastStore } from './state/toastStore';
@@ -143,6 +144,12 @@ export const App: React.FC = () => {
       label: 'Audit Ledger', 
       icon: <ScrollText size={18} />, 
       roles: ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS', 'AUDITOR'] 
+    },
+    { 
+      path: '/reports', 
+      label: 'Secure Reports', 
+      icon: <Lock size={18} />, 
+      roles: ['SUPER_ADMIN', 'ADMIN', 'CLIENT', 'OPERATIONS', 'AUDITOR'] 
     },
     { 
       path: '/telemetry', 
@@ -395,6 +402,16 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'CLIENT', 'OPERATIONS', 'AUDITOR']}>
                     <OneView />
+                  </ProtectedRoute>
+                } 
+              />
+
+              {/* Reports Portal route */}
+              <Route 
+                path="/reports" 
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'CLIENT', 'OPERATIONS', 'AUDITOR']}>
+                    <ReportsPortal />
                   </ProtectedRoute>
                 } 
               />
