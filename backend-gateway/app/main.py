@@ -55,6 +55,10 @@ async def initialize_database():
                 await conn.execute(text("UPDATE users SET role = 'OPERATIONS' WHERE role = 'OPERATOR';"))
                 await conn.execute(text("ALTER TABLE admin_access_keys ALTER COLUMN user_id DROP NOT NULL;"))
                 await conn.execute(text("ALTER TABLE admin_access_keys ADD COLUMN IF NOT EXISTS role VARCHAR(30);"))
+                
+                # Dynamic Access IP Whitelist Migrations
+                await conn.execute(text("ALTER TABLE ip_whitelist ADD COLUMN IF NOT EXISTS is_cidr BOOLEAN NOT NULL DEFAULT FALSE;"))
+                await conn.execute(text("ALTER TABLE ip_whitelist ADD COLUMN IF NOT EXISTS organization_id VARCHAR(100);"))
             except Exception as e:
                 logger.warning(f"Note on migration execution: {e}")
         logger.info("Database tables initialized successfully.")
