@@ -45,8 +45,12 @@ export const AdminLogin: React.FC = () => {
     } catch (err: any) {
       console.error('Admin login error', err);
       let errMsg = 'Failed to authenticate. Please try again.';
-      if (err.response && err.response.data && err.response.data.detail) {
-        errMsg = err.response.data.detail;
+      if (err.response && err.response.data) {
+        if (err.response.data.detail) {
+          errMsg = err.response.data.detail;
+        } else if (err.response.data.message) {
+          errMsg = err.response.data.message;
+        }
       } else if (err.message) {
         errMsg = err.message;
       }
