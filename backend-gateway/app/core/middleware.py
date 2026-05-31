@@ -365,9 +365,16 @@ class IPWhitelistingMiddleware(BaseHTTPMiddleware):
         from app.database.models import IPWhitelist, AuditLog
         from sqlalchemy import select
 
+        x_client_ip = request.headers.get("x-client-ip")
         x_forwarded_for = request.headers.get("x-forwarded-for")
-        if x_forwarded_for:
+        x_real_ip = request.headers.get("x-real-ip")
+        
+        if x_client_ip:
+            client_ip = x_client_ip.split(",")[0].strip()
+        elif x_forwarded_for:
             client_ip = x_forwarded_for.split(",")[0].strip()
+        elif x_real_ip:
+            client_ip = x_real_ip.split(",")[0].strip()
         else:
             client_ip = request.client.host if request.client else "unknown"
 
