@@ -39,7 +39,6 @@ class TokenResponse(BaseModel):
 class AdminTokenRequest(BaseModel):
     username: str
     password: str
-    admin_access_key: str
 
 class AdminCreateRequest(BaseModel):
     username: str
@@ -311,25 +310,6 @@ async def admin_login(payload: AdminTokenRequest, req_obj: Request, db: AsyncSes
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid credentials. Verify username/email and password."
-        )
-
-    # Verify Admin Access Key
-    key_stmt = select(AdminAccessKey).where(
-        (AdminAccessKey.user_id == user.id) & 
-        (AdminAccessKey.is_active == True)
-    )
-    key_res = await db.execute(key_stmt)
-    valid_key = False
-    for k in key_res.scalars():
-        if verify_password(payload.admin_access_key, k.key_hash):
-            valid_key = True
-            break
-            
-    if not valid_key:
-        await log_admin_action(db, user.username, user.role, "ADMIN_LOGIN_FAILED", "Invalid admin access key", req_obj)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing admin access key."
         )
 
     # Create Access Token
